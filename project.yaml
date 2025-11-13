@@ -1,0 +1,54 @@
+name: coverage-redesign
+root: env:IH_HOME
+repos:
+    - id: ih-projects
+      path: ih-projects
+      tags: []
+    - id: project-coverage-redesign
+      path: project-coverage-redesign
+      tags: []
+    - id: coverage
+      path: coverage
+      tags: []
+    - id: customer-configuration
+      path: customer-configuration
+      tags: []
+    - id: go-common
+      path: go-common
+      tags: []
+    - id: member-sponsorship
+      path: member-sponsorship
+      tags: []
+    - id: proto-common
+      path: proto-common
+      tags: []
+    - id: realtime-eligibility
+      path: realtime-eligibility
+      tags: []
+    - id: support-tools
+      path: support-tools
+      tags: []
+    - id: platform-map
+      path: platform-map
+      tags: []
+    - id: surveyor
+      path: surveyor
+      tags: []
+    - id: ih-observability
+      path: ih-observability
+      tags: []
+    - id: platform-api
+      path: platform-api
+      tags: []
+    - id: agent-platform
+      path: agent-platform
+      tags: []
+    - id: protostore
+      path: protostore
+      tags: []
+ide:
+    vscode:
+        workspace_file: coverage-redesign.code-workspace
+    intellij:
+        project_dir: .
+        module_prefix: meta_
