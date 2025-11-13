@@ -278,7 +278,7 @@ User clicks "Check Coverage"
 
 ### The Ultimate Goal: Zero Wait Time
 
-The event-driven infrastructure enables a powerful advanced feature: **Proactive Cache Warming** (detailed in `realtime-eligibility/docs/proactive-cache-warming.md`).
+The event-driven infrastructure enables a powerful advanced feature: **Proactive Cache Warming** (detailed in `./proactive-cache-warming.md`).
 
 #### How It Works
 
@@ -351,7 +351,7 @@ Member Cron is part of IncludedHealth's **Digital Twin architecture** (2025 Tech
 
 **Depends on**: Phases 1-6 (event infrastructure must be in place)
 
-**See**: `realtime-eligibility/docs/proactive-cache-warming.md` for 3960-line full specification
+**See**: `./proactive-cache-warming.md` for 3960-line full specification
 
 ---
 
@@ -720,7 +720,7 @@ Frontend                     WebSocket Gateway              Kafka               
 
 - **Full Plan**: `EVENT_DRIVEN_RTE_PLAN.md` - Comprehensive 2074-line specification
 - **RTE Docs**: `realtime-eligibility/docs/traffic-control.md` - Current architecture
-- **Cache Warming**: `realtime-eligibility/docs/proactive-cache-warming.md` - Member Cron design
+- **Cache Warming**: `./proactive-cache-warming.md` - Member Cron design
 - **Request Chains**: `coverage/REQUEST_CHAINS_ACT_2819.md` - Timeout analysis
 - **Implementation Plan**: `coverage/IMPLEMENTATION_PLAN_ACT_2819.md` - ACT-2819 context
 

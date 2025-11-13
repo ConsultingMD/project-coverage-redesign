@@ -4,7 +4,7 @@
 
 This directory contains the complete technical specification and planning documents for replacing long-running RTE (Real-Time Eligibility) requests with an event-driven architecture using Kafka and WebSocket Gateway.
 
-**Total Documentation**: 7,195 lines across 6 documents
+**Total Documentation**: 11,154 lines across 7 documents
 
 ---
 
@@ -87,6 +87,17 @@ This directory contains the complete technical specification and planning docume
   - Complete code examples (TypeScript + Go)
 - **Audience**: Backend engineers, platform engineers, architects
 
+**[proactive-cache-warming.md](./proactive-cache-warming.md)** (3,959 lines)
+- **Purpose**: Predictive system for pre-warming RTE caches before members need them
+- **Contents**:
+  - Member Cron service (scheduled event emitter)
+  - ML-based prediction engine for app usage
+  - Cache warming interface with Stedi Batch API
+  - Integration with Digital Twin architecture
+  - Implementation roadmap (Phase 7, Weeks 25-28)
+  - Zero wait-time user experience design
+- **Audience**: Backend engineers, ML/data teams, architects
+
 ---
 
 ## Quick Navigation by Role
@@ -156,7 +167,7 @@ This directory contains the complete technical specification and planning docume
 
 ## Related Documentation
 
-- `../../realtime-eligibility/docs/proactive-cache-warming.md` - Proactive cache warming (Phase 7)
+- `./proactive-cache-warming.md` - Proactive cache warming (Phase 7)
 - `../../realtime-eligibility/docs/traffic-control.md` - RTE traffic control (Gates 1-3)
 - `../../member-sponsorship/docs/explanation/request-deduplication.md` - Hybrid pub/sub + polling pattern
 - `../../member-ios-app/App/Features/Sources/VideoVisits/README.md` - iOS Pusher fallback pattern

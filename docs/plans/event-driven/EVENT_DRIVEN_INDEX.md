@@ -135,7 +135,7 @@ This directory contains comprehensive documentation for replacing synchronous RT
 
 **Integration: Future enhancement using event infrastructure for predictive cache warming**
 
-**This section explains how the existing `realtime-eligibility/docs/proactive-cache-warming.md` document integrates with the event-driven architecture.**
+**This section explains how the existing `./proactive-cache-warming.md` document integrates with the event-driven architecture.**
 
 ---
 
@@ -143,7 +143,7 @@ This directory contains comprehensive documentation for replacing synchronous RT
 
 ### What Is Proactive Cache Warming?
 
-The `proactive-cache-warming.md` document (located in `realtime-eligibility/docs/`) describes a **predictive system** for pre-warming RTE caches **before** members need them. Instead of waiting for users to trigger cache misses, the system:
+The `./proactive-cache-warming.md` document describes a **predictive system** for pre-warming RTE caches **before** members need them. Instead of waiting for users to trigger cache misses, the system:
 
 1. **Predicts** which members will use the app (ML model)
 2. **Schedules** cache warming jobs before predicted usage
@@ -404,7 +404,7 @@ User opens app → Cache miss → Wait 10-30s → Frustration
 ### Related Documentation
 
 **External (realtime-eligibility repo)**:
-- `realtime-eligibility/docs/proactive-cache-warming.md` - Full 3960-line specification
+- `./proactive-cache-warming.md` - Full 3960-line specification
 
 **This repo (project-coverage-redesign)**:
 - `EVENT_DRIVEN_RTE_PLAN.md` Section 9.7 - Mentions Phase 7 (cache warming)
@@ -967,7 +967,7 @@ DIGITAL_SESSION_PLATFORM_PLAN.md (Weeks 5-24, overlaps with RTE phases)
          ↓ ADVANCED FEATURE ↓
 
 PROACTIVE CACHE WARMING (Phase 7, Weeks 25-28)
-    ├─ Source: realtime-eligibility/docs/proactive-cache-warming.md
+    ├─ Source: ./proactive-cache-warming.md
     ├─ Components: Member Cron + ML predictions + Stedi Batch API
     ├─ Goal: Zero wait time (<500ms cache hits)
     ├─ Integration: Uses same Kafka infrastructure from Phase 1-6
@@ -1008,7 +1008,7 @@ By building the generic platform, we solve RTE timeouts **and** enable a whole n
 👉 **Read**: All documents including Proactive Cache Warming Integration section (this doc)
 
 ### For ML/Data Teams
-👉 **Read**: Proactive Cache Warming Integration section → `realtime-eligibility/docs/proactive-cache-warming.md`
+👉 **Read**: Proactive Cache Warming Integration section → `./proactive-cache-warming.md`
 
 ### For Platform/Infrastructure Teams
 👉 **Read**: Replacing Pusher with Self-Hosted WebSocket Gateway section (this doc)
@@ -1107,7 +1107,7 @@ By building the generic platform, we solve RTE timeouts **and** enable a whole n
 
 **Core RTE Documentation**:
 - `docs/traffic-control.md` - Current scheduler design (WDRR, token bucket)
-- `docs/proactive-cache-warming.md` - Member Cron integration (Digital Twin)
+- `./proactive-cache-warming.md` - Member Cron integration (Digital Twin)
 - `docs/RTE_REQUEST_CHAIN_ANALYSIS.md` - 7 request chains to Stedi
 - `docs/RTE_ERROR_BACKPRESSURE_ANALYSIS.md` - Failure scenarios
 - `docs/RTE_BACKPRESSURE_CURRENT_STATE_ANALYSIS.md` - First principles analysis
