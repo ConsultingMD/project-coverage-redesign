@@ -4,7 +4,7 @@
 
 This directory contains the complete technical specification and planning documents for replacing long-running RTE (Real-Time Eligibility) requests with an event-driven architecture using Kafka and WebSocket Gateway.
 
-**Total Documentation**: 23,500+ lines across 13 documents
+**Total Documentation**: 26,500+ lines across 14 documents
 
 ---
 
@@ -98,6 +98,26 @@ This directory contains the complete technical specification and planning docume
   - Zero wait-time user experience design
 - **Audience**: Backend engineers, ML/data teams, architects
 
+---
+
+### 🔧 Implementation & Integration
+
+**[PROTO_COMMON_INTEGRATION.md](./PROTO_COMMON_INTEGRATION.md)** (3,000 lines)
+- **Purpose**: How to integrate event-driven architecture with IncludedHealth's proto-common patterns
+- **Contents**:
+  - Protostore event emission pattern (automatic `*Changed` events)
+  - Standard event components (`shared.events.v1.Header`, `Provenance`)
+  - Domain event definition patterns
+  - Safe Harbor annotations for PHI/PII
+  - Event Gateway integration (for non-protostore events)
+  - Migration from CloudEvents to proto-common
+  - Complete proto definitions for RTE, Digital Session, and Care Operations events
+- **Audience**: Backend engineers, platform engineers
+
+---
+
+### 🔐 Security & Compliance
+
 **[ACCESS_CONTROL_DESIGN.md](./ACCESS_CONTROL_DESIGN.md)** (1,225 lines)
 - **Purpose**: Authorization model for WebSocket Gateway and event filtering
 - **Contents**:
@@ -179,11 +199,12 @@ This directory contains the complete technical specification and planning docume
 
 ### Backend Engineer
 1. Read **EVENT_DRIVEN_RTE_PLAN.md** → Architecture & implementation
-2. Review **FAYE_BAYEUX_WEBSOCKET_DESIGN.md** → WebSocket Gateway patterns
-3. Review **ACCESS_CONTROL_DESIGN.md** → Authorization layer
-4. Review **RTE_PROACTIVE_CACHE_WARMING.md** → RTE cache warming implementation
-5. Review **EVENT_SOURCING_CQRS.md** → Event Sourcing patterns
-6. Refer to **EVENT_DRIVEN_INDEX.md** → FAQ & cross-references
+2. **Read PROTO_COMMON_INTEGRATION.md** → Proto-common patterns & protostore events
+3. Review **FAYE_BAYEUX_WEBSOCKET_DESIGN.md** → WebSocket Gateway patterns
+4. Review **ACCESS_CONTROL_DESIGN.md** → Authorization layer
+5. Review **RTE_PROACTIVE_CACHE_WARMING.md** → RTE cache warming implementation
+6. Review **EVENT_SOURCING_CQRS.md** → Event Sourcing patterns
+7. Refer to **EVENT_DRIVEN_INDEX.md** → FAQ & cross-references
 
 ### Frontend Engineer
 1. Read **DIGITAL_SESSION_PLATFORM_PLAN.md** → Frontend SDKs & integration
@@ -194,9 +215,10 @@ This directory contains the complete technical specification and planning docume
 
 ### Platform/Infrastructure Engineer
 1. Read **FAYE_BAYEUX_WEBSOCKET_DESIGN.md** → WebSocket Gateway implementation
-2. Review **EVENT_DRIVEN_RTE_PLAN.md** → Infrastructure requirements
-3. Review **PUSHER_RESEARCH_FINDINGS.md** → Pusher replacement strategy
-4. Refer to **EVENT_DRIVEN_INDEX.md** → System architecture
+2. **Read PROTO_COMMON_INTEGRATION.md** → Event emission patterns & Kafka topics
+3. Review **EVENT_DRIVEN_RTE_PLAN.md** → Infrastructure requirements
+4. Review **PUSHER_RESEARCH_FINDINGS.md** → Pusher replacement strategy
+5. Refer to **EVENT_DRIVEN_INDEX.md** → System architecture
 
 ### Product Manager / Leadership
 1. Read **EVENT_DRIVEN_RTE_SUMMARY.md** → Executive summary & business case

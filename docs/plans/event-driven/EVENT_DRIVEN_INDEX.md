@@ -131,6 +131,30 @@ This directory contains comprehensive documentation for replacing synchronous RT
 
 ---
 
+### 🔧 PROTO_COMMON_INTEGRATION.md (3,000 lines)
+
+**Implementation Guide: Integrate event-driven architecture with IncludedHealth's proto-common patterns**
+
+**Contents**:
+- Protostore event emission pattern (automatic `*Changed` events)
+- Standard event components (`shared.events.v1.Header`, `Provenance`)
+- Domain event definition patterns (following existing RTE, authentication, care operations events)
+- Safe Harbor annotations for PHI/PII
+- Event Gateway integration (for non-protostore events)
+- Migration from CloudEvents to proto-common native format
+- Complete proto definitions for all RTE, Digital Session, and Care Operations events
+- Code generation and kafka topic patterns
+
+**Best for**:
+- Backend engineers implementing event emission
+- Platform engineers setting up Kafka topics
+- Anyone defining new domain events
+- Understanding existing proto-common event patterns
+
+**Key Takeaway**: All events must follow proto-common patterns rather than custom schemas. Protostore automatically generates `*Changed` events for entities; custom events use `shared.events.v1.Header`.
+
+---
+
 ### 🔄 PROACTIVE_CACHE_WARMING_INTEGRATION.md
 
 **Integration: Future enhancement using event infrastructure for predictive cache warming**
@@ -1002,7 +1026,7 @@ By building the generic platform, we solve RTE timeouts **and** enable a whole n
 👉 **Read**: `DIGITAL_SESSION_PLATFORM_PLAN.md` Sections 3-4 (SDK APIs & Use Cases)
 
 ### For Backend Engineers  
-👉 **Read**: `EVENT_DRIVEN_RTE_PLAN.md` Sections 4-6 → Proactive Cache Warming Integration (this doc)
+👉 **Read**: `EVENT_DRIVEN_RTE_PLAN.md` Sections 4-6 → `PROTO_COMMON_INTEGRATION.md` → Proactive Cache Warming Integration (this doc)
 
 ### For Architects
 👉 **Read**: All documents including Proactive Cache Warming Integration section (this doc)
