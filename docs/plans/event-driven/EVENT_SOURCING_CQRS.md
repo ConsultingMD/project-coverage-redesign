@@ -1327,4 +1327,3 @@ class TaskListProjection {
 - **CLIENT_EVENT_PUBLISHING.md** - Client-to-server event publishing
 - **ACCESS_CONTROL_DESIGN.md** - Event authorization
 - **DIGITAL_SESSION_PLATFORM_PLAN.md** - Frontend integration
-

@@ -4,7 +4,7 @@
 
 This directory contains the complete technical specification and planning documents for replacing long-running RTE (Real-Time Eligibility) requests with an event-driven architecture using Kafka and WebSocket Gateway.
 
-**Total Documentation**: 18,900+ lines across 10 documents
+**Total Documentation**: 22,000+ lines across 12 documents
 
 ---
 
@@ -121,7 +121,7 @@ This directory contains the complete technical specification and planning docume
   - Complete TypeScript SDK implementation
 - **Audience**: Frontend engineers, mobile teams, backend engineers, architects
 
-**[EVENT_SOURCING_CQRS.md](./EVENT_SOURCING_CQRS.md)** (NEW!)
+**[EVENT_SOURCING_CQRS.md](./EVENT_SOURCING_CQRS.md)** (1,330 lines)
 - **Purpose**: Implement Event Sourcing and CQRS patterns using event-driven infrastructure
 - **Contents**:
   - Event Sourcing fundamentals (append-only event store)
@@ -134,6 +134,31 @@ This directory contains the complete technical specification and planning docume
   - Complete implementation examples (RTE, Care Tasks)
 - **Audience**: Backend engineers, architects, domain experts
 
+**[DIGITAL_TWIN_PLATFORM.md](./DIGITAL_TWIN_PLATFORM.md)** (NEW!)
+- **Purpose**: General architecture for Digital Twin predictive event platform
+- **Contents**:
+  - Sense-Decide-Act architecture (Digital Twin, The Brain, CareFlow)
+  - 13 predictive models (app usage, health risk, churn, sleep, care gaps, etc.)
+  - Event schema and taxonomy (CloudEvents standard)
+  - Member Cron Service implementation
+  - ML Prediction API integration (KServe)
+  - Domain-specific consumers (RTE, Clinical Copilot, ATC, The Brain)
+  - Monitoring, observability, and cost analysis
+- **Audience**: ML/Data teams, platform engineers, architects
+
+**[RTE_PROACTIVE_CACHE_WARMING.md](./RTE_PROACTIVE_CACHE_WARMING.md)** (NEW!)
+- **Purpose**: Specific implementation of RTE cache warming using Digital Twin predictions
+- **Contents**:
+  - Event subscription to app_usage_likely predictions
+  - Stedi Batch API integration (10k checks/batch, doesn't use real-time slots)
+  - Batch queue strategy (5-minute accumulation)
+  - Redis cache population (24h TTL)
+  - RTE API integration with cache preference
+  - Monitoring and observability
+  - 10-week deployment strategy
+  - $22k/month net savings + 95% faster UX
+- **Audience**: Backend engineers, RTE team, product managers
+
 ---
 
 ## Quick Navigation by Role
@@ -141,7 +166,10 @@ This directory contains the complete technical specification and planning docume
 ### Backend Engineer
 1. Read **EVENT_DRIVEN_RTE_PLAN.md** → Architecture & implementation
 2. Review **FAYE_BAYEUX_WEBSOCKET_DESIGN.md** → WebSocket Gateway patterns
-3. Refer to **EVENT_DRIVEN_INDEX.md** → FAQ & cross-references
+3. Review **ACCESS_CONTROL_DESIGN.md** → Authorization layer
+4. Review **RTE_PROACTIVE_CACHE_WARMING.md** → RTE cache warming implementation
+5. Review **EVENT_SOURCING_CQRS.md** → Event Sourcing patterns
+6. Refer to **EVENT_DRIVEN_INDEX.md** → FAQ & cross-references
 
 ### Frontend Engineer
 1. Read **DIGITAL_SESSION_PLATFORM_PLAN.md** → Frontend SDKs & integration
@@ -157,7 +185,18 @@ This directory contains the complete technical specification and planning docume
 ### Product Manager / Leadership
 1. Read **EVENT_DRIVEN_RTE_SUMMARY.md** → Executive summary & business case
 2. Review **EVENT_DRIVEN_INDEX.md** → Overview & timeline
-3. Refer to **DIGITAL_SESSION_PLATFORM_PLAN.md** → Frontend use cases
+3. Review **RTE_PROACTIVE_CACHE_WARMING.md** → UX improvement via ML predictions
+4. Refer to **DIGITAL_SESSION_PLATFORM_PLAN.md** → Frontend use cases
+
+### ML / Data Science Team
+1. Read **DIGITAL_TWIN_PLATFORM.md** → 13 predictive models and event architecture
+2. Review **RTE_PROACTIVE_CACHE_WARMING.md** → First use case (app usage prediction)
+3. Refer to **DIGITAL_SESSION_PLATFORM_PLAN.md** → Frontend integration patterns
+
+### Platform / Infrastructure Team (Additional)
+1. Read **DIGITAL_TWIN_PLATFORM.md** → Member Cron + ML API architecture
+2. Review **EVENT_DRIVEN_RTE_PLAN.md** → Kafka event infrastructure
+3. Review **FAYE_BAYEUX_WEBSOCKET_DESIGN.md** → WebSocket gateway with fallbacks
 
 ---
 
