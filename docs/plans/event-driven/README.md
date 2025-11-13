@@ -4,7 +4,7 @@
 
 This directory contains the complete technical specification and planning documents for replacing long-running RTE (Real-Time Eligibility) requests with an event-driven architecture using Kafka and WebSocket Gateway.
 
-**Total Documentation**: 22,000+ lines across 12 documents
+**Total Documentation**: 23,500+ lines across 13 documents
 
 ---
 
@@ -146,7 +146,7 @@ This directory contains the complete technical specification and planning docume
   - Monitoring, observability, and cost analysis
 - **Audience**: ML/Data teams, platform engineers, architects
 
-**[RTE_PROACTIVE_CACHE_WARMING.md](./RTE_PROACTIVE_CACHE_WARMING.md)** (NEW!)
+**[RTE_PROACTIVE_CACHE_WARMING.md](./RTE_PROACTIVE_CACHE_WARMING.md)** (785 lines)
 - **Purpose**: Specific implementation of RTE cache warming using Digital Twin predictions
 - **Contents**:
   - Event subscription to app_usage_likely predictions
@@ -158,6 +158,20 @@ This directory contains the complete technical specification and planning docume
   - 10-week deployment strategy
   - $22k/month net savings + 95% faster UX
 - **Audience**: Backend engineers, RTE team, product managers
+
+**[CARE_APP_REALTIME_COLLABORATION.md](./CARE_APP_REALTIME_COLLABORATION.md)** (NEW!)
+- **Purpose**: Real-time collaboration features for Care App (task management)
+- **Contents**:
+  - Presence awareness (who's viewing/editing tasks)
+  - Live task updates (instant sync across all sessions)
+  - Conflict prevention (optimistic locking with version numbers)
+  - Activity feed (team-wide visibility of recent changes)
+  - Task assignment notifications (instant alerts)
+  - WebSocket integration with CareFlow
+  - Authorization and event filtering
+  - Complete React hooks and UI components
+  - 10-week deployment strategy
+- **Audience**: Frontend engineers, Care App team, care coordinators, product managers
 
 ---
 
@@ -173,8 +187,10 @@ This directory contains the complete technical specification and planning docume
 
 ### Frontend Engineer
 1. Read **DIGITAL_SESSION_PLATFORM_PLAN.md** → Frontend SDKs & integration
-2. Review **FAYE_BAYEUX_WEBSOCKET_DESIGN.md** → Client-side fallback patterns
-3. Refer to **EVENT_DRIVEN_INDEX.md** → Quick start guide
+2. Read **CARE_APP_REALTIME_COLLABORATION.md** → Real-time collaboration (Care App)
+3. Review **FAYE_BAYEUX_WEBSOCKET_DESIGN.md** → Client-side fallback patterns
+4. Review **CLIENT_EVENT_PUBLISHING.md** → Client-to-server event publishing
+5. Refer to **EVENT_DRIVEN_INDEX.md** → Quick start guide
 
 ### Platform/Infrastructure Engineer
 1. Read **FAYE_BAYEUX_WEBSOCKET_DESIGN.md** → WebSocket Gateway implementation
