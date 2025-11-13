@@ -4,7 +4,7 @@
 
 This directory contains the complete technical specification and planning documents for replacing long-running RTE (Real-Time Eligibility) requests with an event-driven architecture using Kafka and WebSocket Gateway.
 
-**Total Documentation**: 15,500+ lines across 9 documents
+**Total Documentation**: 18,900+ lines across 10 documents
 
 ---
 
@@ -109,7 +109,7 @@ This directory contains the complete technical specification and planning docume
   - Frontend SDK authorization examples
 - **Audience**: Backend engineers, security teams, compliance, architects
 
-**[CLIENT_EVENT_PUBLISHING.md](./CLIENT_EVENT_PUBLISHING.md)** (NEW!)
+**[CLIENT_EVENT_PUBLISHING.md](./CLIENT_EVENT_PUBLISHING.md)** (1,382 lines)
 - **Purpose**: Bidirectional event streaming - frontend clients publish domain events to backend
 - **Contents**:
   - Durable client-side event queue (IndexedDB/SQLite)
@@ -120,6 +120,19 @@ This directory contains the complete technical specification and planning docume
   - Use cases: analytics, CQRS commands, state sync
   - Complete TypeScript SDK implementation
 - **Audience**: Frontend engineers, mobile teams, backend engineers, architects
+
+**[EVENT_SOURCING_CQRS.md](./EVENT_SOURCING_CQRS.md)** (NEW!)
+- **Purpose**: Implement Event Sourcing and CQRS patterns using event-driven infrastructure
+- **Contents**:
+  - Event Sourcing fundamentals (append-only event store)
+  - CQRS pattern (separate write/read models)
+  - Aggregate roots and domain events
+  - Event store implementation (Kafka + PostgreSQL)
+  - Projections and read models
+  - Temporal integration for sagas
+  - Migration strategy from CRUD to Event Sourcing
+  - Complete implementation examples (RTE, Care Tasks)
+- **Audience**: Backend engineers, architects, domain experts
 
 ---
 

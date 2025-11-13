@@ -1379,4 +1379,3 @@ var (
 - **FAYE_BAYEUX_WEBSOCKET_DESIGN.md** - WebSocket reliability patterns
 - **EVENT_DRIVEN_RTE_PLAN.md** - Server-to-client event push
 - **DIGITAL_SESSION_PLATFORM_PLAN.md** - Frontend platform integration
-
