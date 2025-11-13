@@ -1222,4 +1222,3 @@ export class EventClient {
 - **Authzed integration**: See "Subscription Authorization Flow"
 - **Event annotations**: See "Event Annotation Schema"
 - **Audit logging**: See "Audit Log Schema"
-

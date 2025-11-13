@@ -4,7 +4,7 @@
 
 This directory contains the complete technical specification and planning documents for replacing long-running RTE (Real-Time Eligibility) requests with an event-driven architecture using Kafka and WebSocket Gateway.
 
-**Total Documentation**: 12,400+ lines across 8 documents
+**Total Documentation**: 15,500+ lines across 9 documents
 
 ---
 
@@ -98,7 +98,7 @@ This directory contains the complete technical specification and planning docume
   - Zero wait-time user experience design
 - **Audience**: Backend engineers, ML/data teams, architects
 
-**[ACCESS_CONTROL_DESIGN.md](./ACCESS_CONTROL_DESIGN.md)** (NEW!)
+**[ACCESS_CONTROL_DESIGN.md](./ACCESS_CONTROL_DESIGN.md)** (1,225 lines)
 - **Purpose**: Authorization model for WebSocket Gateway and event filtering
 - **Contents**:
   - Four-layer authorization (JWT, Authzed, event filtering, audit logging)
@@ -108,6 +108,18 @@ This directory contains the complete technical specification and planning docume
   - GraphQL + ConnectRPC integration patterns
   - Frontend SDK authorization examples
 - **Audience**: Backend engineers, security teams, compliance, architects
+
+**[CLIENT_EVENT_PUBLISHING.md](./CLIENT_EVENT_PUBLISHING.md)** (NEW!)
+- **Purpose**: Bidirectional event streaming - frontend clients publish domain events to backend
+- **Contents**:
+  - Durable client-side event queue (IndexedDB/SQLite)
+  - Reliable delivery with acknowledgments
+  - Offline support and sync
+  - Idempotency and deduplication
+  - Event authorization and rate limiting
+  - Use cases: analytics, CQRS commands, state sync
+  - Complete TypeScript SDK implementation
+- **Audience**: Frontend engineers, mobile teams, backend engineers, architects
 
 ---
 
