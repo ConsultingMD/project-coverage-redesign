@@ -1,10 +1,12 @@
-# Event-Driven RTE & Digital Session Platform
+# Event-Driven RTE & Digital Twin MCP Platform
 
 ## Overview
 
-This directory contains the complete technical specification and planning documents for replacing long-running RTE (Real-Time Eligibility) requests with an event-driven architecture using Kafka and WebSocket Gateway.
+This directory contains the complete technical specification and planning documents for:
+1. Replacing long-running RTE (Real-Time Eligibility) requests with an event-driven architecture using Kafka and WebSocket Gateway
+2. Digital Twin MCP pattern integration for real-time member resources following the Model Context Protocol specification
 
-**Total Documentation**: 26,500+ lines across 14 documents
+**Total Documentation**: 30,000+ lines across 20+ documents
 
 ---
 
@@ -47,6 +49,49 @@ This directory contains the complete technical specification and planning docume
   - Comparison: Agent Platform Streaming vs. Event-Driven RTE
   - Pusher Channels replacement strategy
 - **Audience**: Product managers, engineering leadership, executives
+
+---
+
+### 🎯 Digital Twin MCP Pattern
+
+**[DIGITAL_TWIN_MCP_PATTERN.md](./DIGITAL_TWIN_MCP_PATTERN.md)** (521 lines)
+- **Purpose**: First principles design of the Digital Twin MCP interface
+- **Contents**:
+  - Implementation of 2025 Tech Vision "Sense" layer
+  - Three-verb pattern: search, readDocument, chat
+  - Architecture integration with CareFlow, Brain, ATC, Agent Platform
+  - First principles reasoning for interface design
+  - Amazon-style press releases
+- **Audience**: Architects, AI/agent teams, product managers
+
+**[MEMBER_TWIN_RESOURCES_CATALOG.md](./MEMBER_TWIN_RESOURCES_CATALOG.md)** (720 lines)
+- **Purpose**: Complete catalog of MemberTwin MCP resources
+- **Contents**:
+  - Resource URI structure: `mcp://twins/member/{id}/...`
+  - Document types: profile, coverage, care, clinical, financial
+  - Schema Registry integration
+  - Digital Session via chat tool
+  - Memory and synthetic views
+- **Audience**: Backend engineers, AI/agent teams, frontend engineers
+
+**[DIGITAL_TWIN_MCP_RESOURCES_INTEGRATION.md](./DIGITAL_TWIN_MCP_RESOURCES_INTEGRATION.md)** (NEW)
+- **Purpose**: Integration of MCP Resources with event-driven architecture
+- **Contents**:
+  - MCP Resources specification implementation
+  - Resource change notifications via Kafka
+  - WebSocket delivery to frontends
+  - Complete RTE completion flow example
+  - Implementation roadmap
+- **Audience**: Backend engineers, platform engineers, architects
+
+**[MCP_RESOURCES_AND_EVENTS_SUMMARY.md](./MCP_RESOURCES_AND_EVENTS_SUMMARY.md)** (NEW)
+- **Purpose**: Executive summary of MCP + Events integration
+- **Contents**:
+  - Three layers: MCP Resources, Events, Delivery
+  - Key benefits and quick reference
+  - Implementation phases
+  - Success metrics
+- **Audience**: Executives, architects, tech leads
 
 ---
 
@@ -236,6 +281,12 @@ This directory contains the complete technical specification and planning docume
 2. Review **EVENT_DRIVEN_RTE_PLAN.md** → Kafka event infrastructure
 3. Review **FAYE_BAYEUX_WEBSOCKET_DESIGN.md** → WebSocket gateway with fallbacks
 
+### AI / Agent Teams
+1. Read **DIGITAL_TWIN_MCP_PATTERN.md** → MCP interface design and first principles
+2. Review **MEMBER_TWIN_RESOURCES_CATALOG.md** → Available resources and document types
+3. Review **DIGITAL_TWIN_MCP_RESOURCES_INTEGRATION.md** → Resource subscriptions and updates
+4. Refer to **MCP_RESOURCES_AND_EVENTS_SUMMARY.md** → Quick reference
+
 ---
 
 ## Key Concepts
@@ -262,6 +313,13 @@ This directory contains the complete technical specification and planning docume
 - **Future**: Self-hosted WebSocket Gateway with REST polling fallback
 - **Savings**: $1.2-3.6k/year + no vendor lock-in
 - **Note**: Pusher Beams already migrated to FCM (RET-402)
+
+### Digital Twin MCP Pattern
+- **Purpose**: Implement 2025 Tech Vision "Sense" layer via Model Context Protocol
+- **Interface**: Three verbs - search, readDocument, chat
+- **Resources**: Member data exposed as `mcp://twins/member/{id}/...` URIs
+- **Integration**: Resource changes → Kafka events → WebSocket → Frontend updates
+- **Benefits**: AI-native, real-time updates, privacy-aware, standard protocol
 
 ---
 

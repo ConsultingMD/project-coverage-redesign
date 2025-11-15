@@ -1,6 +1,73 @@
 # Event-Driven RTE System - Documentation Index
 
-This directory contains comprehensive documentation for replacing synchronous RTE (Real-Time Eligibility) requests with an event-driven push notification system.
+This directory contains comprehensive documentation for replacing synchronous RTE (Real-Time Eligibility) requests with an event-driven push notification system, along with the Digital Twin MCP pattern integration.
+
+---
+
+## 🆕 Digital Twin MCP Integration
+
+The Digital Twin MCP pattern is now integrated with the event-driven architecture. These documents describe how IH's Digital Twin Platform (the "Sense" layer of the 2025 Tech Vision) uses MCP Resources and event-driven notifications to enable real-time member experiences.
+
+### Core Digital Twin Documents
+
+📄 **DIGITAL_TWIN_MCP_PATTERN.md** (521 lines)
+- First principles design of the Digital Twin MCP interface
+- Three-verb pattern: search, readDocument, chat
+- Implementation of the 2025 Tech Vision "Sense" layer
+- Architecture integration with CareFlow, Brain, ATC, Agent Platform
+
+📄 **MEMBER_TWIN_RESOURCES_CATALOG.md** (720 lines)  
+- Complete catalog of MemberTwin MCP resources
+- Resource URIs: profile, coverage, care, clinical, financial
+- Document types and schemas
+- Digital Session integration via chat tool
+
+📄 **DIGITAL_TWIN_MCP_RESOURCES_INTEGRATION.md** (NEW)
+- **How MCP Resources meet Event-Driven Architecture**
+- Resource change notifications via Kafka
+- WebSocket delivery to frontends
+- Digital Session orchestration
+- Complete example: RTE completion flow
+
+📄 **MCP_RESOURCES_AND_EVENTS_SUMMARY.md** (NEW)
+- Executive summary of MCP + Events integration
+- The three layers: MCP Resources, Events, Delivery
+- Key benefits and implementation phases
+- Quick reference for architects and engineers
+
+📄 **MCP_AUTHORIZATION_AUTHZILLA_INTEGRATION.md** (NEW)
+- Integration of MCP OAuth 2.1 with Authzilla
+- Authzed (SpiceDB) for fine-grained permissions
+- Token structure and validation
+- Complete authorization flow examples
+
+📄 **MCP_SECURITY_BEST_PRACTICES_IH.md** (NEW)
+- Implementation of MCP Security Best Practices
+- Prevention of Confused Deputy attacks
+- Token passthrough prevention (critical)
+- Session hijacking mitigation
+- Security checklist and incident response
+
+📄 **MCP_SAMPLING_ELICITATION_PATTERNS.md** (NEW)
+- Intelligent resource sampling strategies
+- Information elicitation through chat interface
+- Adaptive context management
+- Clinical use cases (triage, adherence, care gaps)
+- Implementation patterns and metrics
+
+### Supporting Documents
+
+📄 **digital_twin_mcp_pattern_review.md**
+- Review and corrections based on actual IH systems
+- Clarifications on what exists vs. what's proposed
+- Alignment with 2025 Tech Vision
+
+📄 **digital_twin_mcp_pattern_corrections_summary.md**
+- Quick reference of key corrections
+- Existing infrastructure (Omnibus MCP, Digital Session Platform)
+
+📄 **digital_twin_specific_text_corrections.md**
+- Line-by-line corrections for accuracy
 
 ---
 
@@ -143,6 +210,7 @@ This directory contains comprehensive documentation for replacing synchronous RT
 - Event Gateway integration (for non-protostore events)
 - Migration from CloudEvents to proto-common native format
 - Complete proto definitions for all RTE, Digital Session, and Care Operations events
+- **NEW**: Digital Twin resource events (`TwinResourceUpdatedEvent`, `TwinResourceCreatedEvent`)
 - Code generation and kafka topic patterns
 
 **Best for**:
@@ -971,6 +1039,14 @@ websocket_auth_failures_total
 ## How the Documents Relate
 
 ```
+DIGITAL TWIN MCP PATTERN (2025 Tech Vision "Sense" Layer)
+    ├─ MCP Resources: Standardized interface for member/practitioner data
+    ├─ Three verbs: search, readDocument, chat
+    ├─ Resource URIs: mcp://twins/member/{id}/coverage, etc.
+    └─ Change notifications: resources/updated events
+    
+         ↓ EMITS EVENTS VIA ↓
+         
 EVENT_DRIVEN_RTE_PLAN.md (Weeks 1-28)
     ├─ Focus: Eliminate RTE timeout failures
     ├─ Infrastructure: Kafka + WebSocket gateway
@@ -987,6 +1063,14 @@ DIGITAL_SESSION_PLATFORM_PLAN.md (Weeks 5-24, overlaps with RTE phases)
     ├─ Frontend SDKs: Web, iOS, Android, Care app
     ├─ Integration: Digital Twin, CareFlow, The Brain
     └─ Benefits: Real-time member experience across all channels
+    
+         ↓ ORCHESTRATES ↓
+         
+DIGITAL_TWIN_MCP_RESOURCES_INTEGRATION.md (NEW)
+    ├─ Connects: MCP Resources ↔ Event-Driven Architecture
+    ├─ Flow: Resource change → Kafka event → WebSocket → Frontend
+    ├─ Example: RTE completion updates coverage resource
+    └─ Result: Real-time push updates for all Digital Twin resources
     
          ↓ ADVANCED FEATURE ↓
 
@@ -1020,16 +1104,35 @@ By building the generic platform, we solve RTE timeouts **and** enable a whole n
 ## Quick Start by Role (Updated)
 
 ### For Executives & Product
-👉 **Read**: `EVENT_DRIVEN_RTE_SUMMARY.md` → Advanced Feature: Proactive Cache Warming section
+👉 **Read**: 
+1. `EVENT_DRIVEN_RTE_SUMMARY.md` - Problem and solution overview
+2. `DIGITAL_TWIN_MCP_PATTERN.md` Section 1 - Concept overview and vision
+3. Advanced Feature: Proactive Cache Warming section
 
 ### For Frontend Engineers
-👉 **Read**: `DIGITAL_SESSION_PLATFORM_PLAN.md` Sections 3-4 (SDK APIs & Use Cases)
+👉 **Read**: 
+1. `DIGITAL_SESSION_PLATFORM_PLAN.md` Sections 3-4 - SDK APIs & Use Cases
+2. `DIGITAL_TWIN_MCP_RESOURCES_INTEGRATION.md` - Real-time resource updates
+3. `MEMBER_TWIN_RESOURCES_CATALOG.md` - Available resources to consume
 
 ### For Backend Engineers  
-👉 **Read**: `EVENT_DRIVEN_RTE_PLAN.md` Sections 4-6 → `PROTO_COMMON_INTEGRATION.md` → Proactive Cache Warming Integration (this doc)
+👉 **Read**: 
+1. `EVENT_DRIVEN_RTE_PLAN.md` Sections 4-6 - Implementation details
+2. `PROTO_COMMON_INTEGRATION.md` - Event patterns
+3. `DIGITAL_TWIN_MCP_RESOURCES_INTEGRATION.md` - Resource change notifications
+4. Proactive Cache Warming Integration (this doc)
 
 ### For Architects
-👉 **Read**: All documents including Proactive Cache Warming Integration section (this doc)
+👉 **Read**: All documents, especially:
+1. `DIGITAL_TWIN_MCP_PATTERN.md` - First principles and architecture
+2. `DIGITAL_TWIN_MCP_RESOURCES_INTEGRATION.md` - How it all connects
+3. `EVENT_DRIVEN_RTE_PLAN.md` - Complete technical specification
+
+### For AI/Agent Teams
+👉 **Read**:
+1. `DIGITAL_TWIN_MCP_PATTERN.md` - MCP interface for agents
+2. `MEMBER_TWIN_RESOURCES_CATALOG.md` - Resources agents can access
+3. `DIGITAL_TWIN_MCP_RESOURCES_INTEGRATION.md` Section on subscriptions
 
 ### For ML/Data Teams
 👉 **Read**: Proactive Cache Warming Integration section → `./proactive-cache-warming.md`
