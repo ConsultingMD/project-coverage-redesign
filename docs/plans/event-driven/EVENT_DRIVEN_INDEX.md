@@ -8,6 +8,20 @@ This directory contains comprehensive documentation for replacing synchronous RT
 
 The Digital Twin MCP pattern is now integrated with the event-driven architecture. These documents describe how IH's Digital Twin Platform (the "Sense" layer of the 2025 Tech Vision) uses MCP Resources and event-driven notifications to enable real-time member experiences.
 
+### 📚 Quick Navigation
+
+📄 **[DIGITAL_TWIN_MCP_README.md](./DIGITAL_TWIN_MCP_README.md)** ⭐ **NEW - START HERE**
+- Complete guide to Digital Twin MCP documentation
+- Role-based reading paths (Executive, Architect, Developer, Security)
+- Implementation roadmap (POC → MVP → Migration)
+- FAQ and quick reference
+
+📄 **[DIGITAL_TWIN_MCP_MASTER.md](./DIGITAL_TWIN_MCP_MASTER.md)** 📚 **NEW - CONSISTENCY GUIDE**
+- Document hierarchy and structure
+- Terminology and naming standards (Digital Twin MCP, MemberTwin, tool naming)
+- Code style guide for Go, Python, TypeScript
+- Cross-reference matrix for all documents
+
 ### Core Digital Twin Documents
 
 📄 **DIGITAL_TWIN_MCP_PATTERN.md** (521 lines)
@@ -54,6 +68,21 @@ The Digital Twin MCP pattern is now integrated with the event-driven architectur
 - Adaptive context management
 - Clinical use cases (triage, adherence, care gaps)
 - Implementation patterns and metrics
+
+📄 **DIGITAL_TWIN_MCP_MVP_POC.md** (NEW)
+- Thinnest MVP to prove out Digital Twin MCP pattern
+- Golang implementation options and architecture
+- Integration with Agent Platform and LangChain
+- Test client recommendations (Claude Desktop, MCP Inspector)
+- 3-week implementation plan for throwaway POC
+
+📄 **AGENT_PLATFORM_DIGITAL_TWIN_MIGRATION.md** (NEW)
+- Complete mapping of Agent Platform tools → Digital Twin resources
+- Shows 100+ tools → 3 universal tools simplification
+- Migration phases (28 weeks, 7 phases)
+- Before/after architecture comparison
+- Code reduction metrics (80%+ reduction)
+- Risk mitigation and success criteria
 
 ### Supporting Documents
 
