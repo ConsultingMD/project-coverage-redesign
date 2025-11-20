@@ -1,0 +1,512 @@
+{
+  "dashboard": {
+    "title": "RTE Paths - All Clients to Coverage-Server → RTE (RED Metrics)",
+    "description": "Comprehensive RED metrics dashboard showing all paths to RTE service through coverage-server. Tracks Rate, Errors, and Duration for all client services.",
+    "tags": ["rte", "coverage", "red-metrics", "dependencies", "dp-5538"],
+    "timezone": "browser",
+    "schemaVersion": 38,
+    "version": 1,
+    "refresh": "30s",
+    "time": {
+      "from": "now-6h",
+      "to": "now"
+    },
+    "timepicker": {
+      "refresh_intervals": ["10s", "30s", "1m", "5m", "15m", "30m", "1h", "2h", "1d"]
+    },
+    "panels": [
+      {
+        "id": 1,
+        "title": "Overview: Total RTE Request Rate",
+        "type": "stat",
+        "gridPos": {"h": 4, "w": 24, "x": 0, "y": 0},
+        "targets": [
+          {
+            "expr": "sum(rate(traces_spanmetrics_calls_total{service=\"coverage-server\", span_name=~\"HTTP POST.*coverage.*|.*rte.*|.*RTE.*\"}[5m]))",
+            "legendFormat": "Total RTE Requests/sec",
+            "refId": "A"
+          }
+        ],
+        "fieldConfig": {
+          "defaults": {
+            "color": {"mode": "thresholds"},
+            "thresholds": {
+              "mode": "absolute",
+              "steps": [
+                {"value": null, "color": "green"},
+                {"value": 5, "color": "yellow"},
+                {"value": 10, "color": "red"}
+              ]
+            },
+            "unit": "reqps",
+            "decimals": 2
+          }
+        },
+        "options": {
+          "graphMode": "area",
+          "colorMode": "value"
+        }
+      },
+      {
+        "id": 2,
+        "title": "RATE: Requests per Second by Client Service",
+        "type": "timeseries",
+        "gridPos": {"h": 8, "w": 24, "x": 0, "y": 4},
+        "targets": [
+          {
+            "expr": "sum(rate(traces_spanmetrics_calls_total{service=~\"cost-share|medication|athena-bridge|family|member-android-app|member-ios-app|memberfeedback-server|mx-ui-workflows|newcoproxy-server|oneapp-migration|practitioner-availability|practitioner-server|provider-match-server|px-careflow|quactl|revenue-cycle-management|service-request|wizard|dedicated-care-team-server|digitalagent-server\", span_name=~\"HTTP POST.*coverage.*|.*coverage.*\"}[5m])) by (service)",
+            "legendFormat": "{{service}}",
+            "refId": "A"
+          }
+        ],
+        "fieldConfig": {
+          "defaults": {
+            "color": {"mode": "palette-classic"},
+            "custom": {
+              "axisLabel": "Requests/sec",
+              "axisPlacement": "auto",
+              "drawStyle": "line",
+              "fillOpacity": 10,
+              "gradientMode": "none",
+              "lineInterpolation": "linear",
+              "lineWidth": 1,
+              "pointSize": 5,
+              "showPoints": "never",
+              "spanNulls": false
+            },
+            "unit": "reqps",
+            "decimals": 2
+          }
+        },
+        "options": {
+          "legend": {
+            "displayMode": "table",
+            "placement": "bottom",
+            "showLegend": true
+          },
+          "tooltip": {
+            "mode": "multi"
+          }
+        }
+      },
+      {
+        "id": 3,
+        "title": "ERRORS: Error Rate by Client Service (%)",
+        "type": "timeseries",
+        "gridPos": {"h": 8, "w": 12, "x": 0, "y": 12},
+        "targets": [
+          {
+            "expr": "100 * sum(rate(traces_spanmetrics_calls_total{service=~\"cost-share|medication|athena-bridge|family|member-android-app|member-ios-app|memberfeedback-server|mx-ui-workflows|newcoproxy-server|oneapp-migration|practitioner-availability|practitioner-server|provider-match-server|px-careflow|quactl|revenue-cycle-management|service-request|wizard|dedicated-care-team-server|digitalagent-server\", span_name=~\"HTTP POST.*coverage.*|.*coverage.*\", status_code=~\"5..|4..\"}[5m])) by (service) / sum(rate(traces_spanmetrics_calls_total{service=~\"cost-share|medication|athena-bridge|family|member-android-app|member-ios-app|memberfeedback-server|mx-ui-workflows|newcoproxy-server|oneapp-migration|practitioner-availability|practitioner-server|provider-match-server|px-careflow|quactl|revenue-cycle-management|service-request|wizard|dedicated-care-team-server|digitalagent-server\", span_name=~\"HTTP POST.*coverage.*|.*coverage.*\"}[5m])) by (service)",
+            "legendFormat": "{{service}}",
+            "refId": "A"
+          }
+        ],
+        "fieldConfig": {
+          "defaults": {
+            "color": {"mode": "thresholds"},
+            "thresholds": {
+              "mode": "absolute",
+              "steps": [
+                {"value": null, "color": "green"},
+                {"value": 1, "color": "yellow"},
+                {"value": 5, "color": "orange"},
+                {"value": 10, "color": "red"}
+              ]
+            },
+            "unit": "percent",
+            "decimals": 2,
+            "min": 0,
+            "max": 100
+          }
+        },
+        "options": {
+          "legend": {
+            "displayMode": "table",
+            "placement": "bottom"
+          }
+        }
+      },
+      {
+        "id": 4,
+        "title": "ERRORS: Error Count by Client Service",
+        "type": "timeseries",
+        "gridPos": {"h": 8, "w": 12, "x": 12, "y": 12},
+        "targets": [
+          {
+            "expr": "sum(rate(traces_spanmetrics_calls_total{service=~\"cost-share|medication|athena-bridge|family|member-android-app|member-ios-app|memberfeedback-server|mx-ui-workflows|newcoproxy-server|oneapp-migration|practitioner-availability|practitioner-server|provider-match-server|px-careflow|quactl|revenue-cycle-management|service-request|wizard|dedicated-care-team-server|digitalagent-server\", span_name=~\"HTTP POST.*coverage.*|.*coverage.*\", status_code=~\"5..|4..\"}[5m])) by (service, status_code)",
+            "legendFormat": "{{service}} - {{status_code}}",
+            "refId": "A"
+          }
+        ],
+        "fieldConfig": {
+          "defaults": {
+            "color": {"mode": "palette-classic"},
+            "unit": "reqps",
+            "decimals": 2
+          }
+        },
+        "options": {
+          "legend": {
+            "displayMode": "table",
+            "placement": "bottom"
+          }
+        }
+      },
+      {
+        "id": 5,
+        "title": "DURATION: P50 Latency by Client Service",
+        "type": "timeseries",
+        "gridPos": {"h": 8, "w": 8, "x": 0, "y": 20},
+        "targets": [
+          {
+            "expr": "histogram_quantile(0.50, sum(rate(traces_spanmetrics_latency_bucket{service=~\"cost-share|medication|athena-bridge|family|member-android-app|member-ios-app|memberfeedback-server|mx-ui-workflows|newcoproxy-server|oneapp-migration|practitioner-availability|practitioner-server|provider-match-server|px-careflow|quactl|revenue-cycle-management|service-request|wizard|dedicated-care-team-server|digitalagent-server\", span_name=~\"HTTP POST.*coverage.*|.*coverage.*\"}[5m])) by (service, le))",
+            "legendFormat": "{{service}} P50",
+            "refId": "A"
+          }
+        ],
+        "fieldConfig": {
+          "defaults": {
+            "color": {"mode": "palette-classic"},
+            "unit": "s",
+            "decimals": 3
+          }
+        }
+      },
+      {
+        "id": 6,
+        "title": "DURATION: P95 Latency by Client Service",
+        "type": "timeseries",
+        "gridPos": {"h": 8, "w": 8, "x": 8, "y": 20},
+        "targets": [
+          {
+            "expr": "histogram_quantile(0.95, sum(rate(traces_spanmetrics_latency_bucket{service=~\"cost-share|medication|athena-bridge|family|member-android-app|member-ios-app|memberfeedback-server|mx-ui-workflows|newcoproxy-server|oneapp-migration|practitioner-availability|practitioner-server|provider-match-server|px-careflow|quactl|revenue-cycle-management|service-request|wizard|dedicated-care-team-server|digitalagent-server\", span_name=~\"HTTP POST.*coverage.*|.*coverage.*\"}[5m])) by (service, le))",
+            "legendFormat": "{{service}} P95",
+            "refId": "A"
+          }
+        ],
+        "fieldConfig": {
+          "defaults": {
+            "color": {"mode": "thresholds"},
+            "thresholds": {
+              "mode": "absolute",
+              "steps": [
+                {"value": null, "color": "green"},
+                {"value": 1, "color": "yellow"},
+                {"value": 5, "color": "orange"},
+                {"value": 10, "color": "red"}
+              ]
+            },
+            "unit": "s",
+            "decimals": 3
+          }
+        }
+      },
+      {
+        "id": 7,
+        "title": "DURATION: P99 Latency by Client Service",
+        "type": "timeseries",
+        "gridPos": {"h": 8, "w": 8, "x": 16, "y": 20},
+        "targets": [
+          {
+            "expr": "histogram_quantile(0.99, sum(rate(traces_spanmetrics_latency_bucket{service=~\"cost-share|medication|athena-bridge|family|member-android-app|member-ios-app|memberfeedback-server|mx-ui-workflows|newcoproxy-server|oneapp-migration|practitioner-availability|practitioner-server|provider-match-server|px-careflow|quactl|revenue-cycle-management|service-request|wizard|dedicated-care-team-server|digitalagent-server\", span_name=~\"HTTP POST.*coverage.*|.*coverage.*\"}[5m])) by (service, le))",
+            "legendFormat": "{{service}} P99",
+            "refId": "A"
+          }
+        ],
+        "fieldConfig": {
+          "defaults": {
+            "color": {"mode": "thresholds"},
+            "thresholds": {
+              "mode": "absolute",
+              "steps": [
+                {"value": null, "color": "green"},
+                {"value": 1, "color": "yellow"},
+                {"value": 5, "color": "orange"},
+                {"value": 10, "color": "red"}
+              ]
+            },
+            "unit": "s",
+            "decimals": 3
+          }
+        }
+      },
+      {
+        "id": 8,
+        "title": "RTE Service: Request Rate (coverage-server → RTE)",
+        "type": "timeseries",
+        "gridPos": {"h": 8, "w": 12, "x": 0, "y": 28},
+        "targets": [
+          {
+            "expr": "sum(rate(stedi_request_duration_count[5m])) by (service_name)",
+            "legendFormat": "{{service_name}}",
+            "refId": "A"
+          }
+        ],
+        "fieldConfig": {
+          "defaults": {
+            "color": {"mode": "palette-classic"},
+            "unit": "reqps",
+            "decimals": 2
+          }
+        },
+        "options": {
+          "legend": {
+            "displayMode": "table",
+            "placement": "bottom"
+          }
+        }
+      },
+      {
+        "id": 9,
+        "title": "RTE Service: P95 Latency",
+        "type": "timeseries",
+        "gridPos": {"h": 8, "w": 12, "x": 12, "y": 28},
+        "targets": [
+          {
+            "expr": "histogram_quantile(0.95, sum(rate(stedi_request_duration_bucket[5m])) by (service_name, le))",
+            "legendFormat": "{{service_name}} P95",
+            "refId": "A"
+          }
+        ],
+        "fieldConfig": {
+          "defaults": {
+            "color": {"mode": "thresholds"},
+            "thresholds": {
+              "mode": "absolute",
+              "steps": [
+                {"value": null, "color": "green"},
+                {"value": 1, "color": "yellow"},
+                {"value": 5, "color": "orange"},
+                {"value": 10, "color": "red"}
+              ]
+            },
+            "unit": "s",
+            "decimals": 3
+          }
+        }
+      },
+      {
+        "id": 10,
+        "title": "Top 10 Clients by Request Volume (Last Hour)",
+        "type": "table",
+        "gridPos": {"h": 8, "w": 12, "x": 0, "y": 36},
+        "targets": [
+          {
+            "expr": "topk(10, sum(increase(traces_spanmetrics_calls_total{service=~\"cost-share|medication|athena-bridge|family|member-android-app|member-ios-app|memberfeedback-server|mx-ui-workflows|newcoproxy-server|oneapp-migration|practitioner-availability|practitioner-server|provider-match-server|px-careflow|quactl|revenue-cycle-management|service-request|wizard|dedicated-care-team-server|digitalagent-server\", span_name=~\"HTTP POST.*coverage.*|.*coverage.*\"}[1h])) by (service))",
+            "format": "table",
+            "instant": true,
+            "legendFormat": "{{service}}",
+            "refId": "A"
+          }
+        ],
+        "fieldConfig": {
+          "defaults": {
+            "color": {"mode": "thresholds"},
+            "custom": {
+              "align": "auto",
+              "displayMode": "auto"
+            },
+            "mappings": [],
+            "thresholds": {
+              "mode": "absolute",
+              "steps": [
+                {"value": null, "color": "green"},
+                {"value": 1000, "color": "yellow"},
+                {"value": 5000, "color": "orange"},
+                {"value": 10000, "color": "red"}
+              ]
+            },
+            "unit": "short"
+          }
+        },
+        "options": {
+          "showHeader": true,
+          "sortBy": [
+            {
+              "desc": true,
+              "displayName": "Value"
+            }
+          ]
+        }
+      },
+      {
+        "id": 11,
+        "title": "cost-share Service Detail (⚠️ Known Offender)",
+        "type": "timeseries",
+        "gridPos": {"h": 8, "w": 12, "x": 12, "y": 36},
+        "targets": [
+          {
+            "expr": "sum(rate(traces_spanmetrics_calls_total{service=\"cost-share\", span_name=~\"HTTP POST.*coverage.*|.*coverage.*\"}[5m]))",
+            "legendFormat": "Request Rate",
+            "refId": "A"
+          },
+          {
+            "expr": "100 * sum(rate(traces_spanmetrics_calls_total{service=\"cost-share\", span_name=~\"HTTP POST.*coverage.*|.*coverage.*\", status_code=~\"5..|4..\"}[5m])) / sum(rate(traces_spanmetrics_calls_total{service=\"cost-share\", span_name=~\"HTTP POST.*coverage.*|.*coverage.*\"}[5m]))",
+            "legendFormat": "Error Rate %",
+            "refId": "B"
+          },
+          {
+            "expr": "histogram_quantile(0.95, sum(rate(traces_spanmetrics_latency_bucket{service=\"cost-share\", span_name=~\"HTTP POST.*coverage.*|.*coverage.*\"}[5m])) by (le))",
+            "legendFormat": "P95 Latency",
+            "refId": "C"
+          }
+        ],
+        "fieldConfig": {
+          "defaults": {
+            "color": {"mode": "palette-classic"},
+            "unit": "short",
+            "decimals": 2
+          }
+        },
+        "options": {
+          "legend": {
+            "displayMode": "table",
+            "placement": "bottom"
+          }
+        }
+      },
+      {
+        "id": 12,
+        "title": "Alert: High Request Rate (>5 req/sec)",
+        "type": "stat",
+        "gridPos": {"h": 4, "w": 12, "x": 0, "y": 44},
+        "targets": [
+          {
+            "expr": "sum(rate(traces_spanmetrics_calls_total{service=~\"cost-share|medication|athena-bridge|family|member-android-app|member-ios-app|memberfeedback-server|mx-ui-workflows|newcoproxy-server|oneapp-migration|practitioner-availability|practitioner-server|provider-match-server|px-careflow|quactl|revenue-cycle-management|service-request|wizard|dedicated-care-team-server|digitalagent-server\", span_name=~\"HTTP POST.*coverage.*|.*coverage.*\"}[5m])) by (service) > 5",
+            "legendFormat": "{{service}}",
+            "refId": "A"
+          }
+        ],
+        "fieldConfig": {
+          "defaults": {
+            "color": {"mode": "thresholds"},
+            "thresholds": {
+              "mode": "absolute",
+              "steps": [
+                {"value": null, "color": "green"},
+                {"value": 1, "color": "red"}
+              ]
+            },
+            "mappings": [
+              {
+                "options": {
+                  "0": {
+                    "text": "OK",
+                    "color": "green"
+                  },
+                  "1": {
+                    "text": "HIGH",
+                    "color": "red"
+                  }
+                },
+                "type": "value"
+              }
+            ],
+            "unit": "short"
+          }
+        },
+        "options": {
+          "graphMode": "none",
+          "colorMode": "background",
+          "textMode": "value_and_name"
+        }
+      },
+      {
+        "id": 13,
+        "title": "Alert: High Error Rate (>5%)",
+        "type": "stat",
+        "gridPos": {"h": 4, "w": 12, "x": 12, "y": 44},
+        "targets": [
+          {
+            "expr": "100 * sum(rate(traces_spanmetrics_calls_total{service=~\"cost-share|medication|athena-bridge|family|member-android-app|member-ios-app|memberfeedback-server|mx-ui-workflows|newcoproxy-server|oneapp-migration|practitioner-availability|practitioner-server|provider-match-server|px-careflow|quactl|revenue-cycle-management|service-request|wizard|dedicated-care-team-server|digitalagent-server\", span_name=~\"HTTP POST.*coverage.*|.*coverage.*\", status_code=~\"5..|4..\"}[5m])) by (service) / sum(rate(traces_spanmetrics_calls_total{service=~\"cost-share|medication|athena-bridge|family|member-android-app|member-ios-app|memberfeedback-server|mx-ui-workflows|newcoproxy-server|oneapp-migration|practitioner-availability|practitioner-server|provider-match-server|px-careflow|quactl|revenue-cycle-management|service-request|wizard|dedicated-care-team-server|digitalagent-server\", span_name=~\"HTTP POST.*coverage.*|.*coverage.*\"}[5m])) by (service) > 5",
+            "legendFormat": "{{service}}",
+            "refId": "A"
+          }
+        ],
+        "fieldConfig": {
+          "defaults": {
+            "color": {"mode": "thresholds"},
+            "thresholds": {
+              "mode": "absolute",
+              "steps": [
+                {"value": null, "color": "green"},
+                {"value": 1, "color": "red"}
+              ]
+            },
+            "mappings": [
+              {
+                "options": {
+                  "0": {
+                    "text": "OK",
+                    "color": "green"
+                  },
+                  "1": {
+                    "text": "HIGH ERRORS",
+                    "color": "red"
+                  }
+                },
+                "type": "value"
+              }
+            ],
+            "unit": "percent",
+            "decimals": 1
+          }
+        },
+        "options": {
+          "graphMode": "none",
+          "colorMode": "background",
+          "textMode": "value_and_name"
+        }
+      }
+    ],
+    "templating": {
+      "list": [
+        {
+          "name": "client_service",
+          "type": "query",
+          "label": "Client Service",
+          "datasource": {
+            "uid": "O46jHU-4z",
+            "type": "prometheus"
+          },
+          "query": {
+            "query": "label_values(traces_spanmetrics_calls_total{span_name=~\"HTTP POST.*coverage.*|.*coverage.*\"}, service)",
+            "refId": "StandardVariableQuery"
+          },
+          "current": {
+            "selected": false,
+            "text": "All",
+            "value": "$__all"
+          },
+          "includeAll": true,
+          "multi": true,
+          "allValue": ".*"
+        }
+      ]
+    },
+    "annotations": {
+      "list": [
+        {
+          "name": "Deployments",
+          "datasource": {
+            "uid": "O46jHU-4z",
+            "type": "prometheus"
+          },
+          "enable": true,
+          "iconColor": "rgba(0, 211, 255, 1)",
+          "tags": ["deploy"],
+          "type": "tags"
+        }
+      ]
+    },
+    "links": [
+      {
+        "title": "DP-5538 Investigation",
+        "url": "https://includedhealth.atlassian.net/browse/DP-5538",
+        "type": "link",
+        "icon": "external link",
+        "tags": []
+      }
+    ]
+  }
+}
