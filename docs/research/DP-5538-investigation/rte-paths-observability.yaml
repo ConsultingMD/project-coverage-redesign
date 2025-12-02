@@ -11,16 +11,17 @@
       description: |
         Monitor total request rate to RTE through coverage-server.
         Spike detection for internal DOS scenarios (DP-5538).
+        NOTE: Set to warning while validating thresholds after 50-worker increase.
       query: |
         sum(rate(traces_spanmetrics_calls_total{
           service="coverage-server",
           span_name=~"HTTP POST.*coverage.*|.*rte.*|.*RTE.*"
         }[5m]))
       dataSource: metrics
-      runbookURL: https://includedhealth.atlassian.net/browse/DP-5538
+      runbookURL: https://github.com/ConsultingMD/coverage/blob/main/docs/runbooks/rte-traffic-spike-runbook.md
       configs:
         production:
-          severity: critical
+          severity: warning
           threshold: 10
           gracePeriod: 5m
           condition: above
@@ -35,18 +36,19 @@
     - name: cost-share Service RTE Traffic Rate
       description: |
         Monitor cost-share service traffic to coverage-server (primary suspect in DP-5538).
-        Alert if rate exceeds 2 req/s (normal baseline ~0.5 req/s).
+        With 50 workers, alert if rate exceeds 5 req/s (normal baseline ~0.5-1 req/s).
+        NOTE: Set to warning while validating thresholds after 50-worker increase.
       query: |
         sum(rate(traces_spanmetrics_calls_total{
           service="cost-share",
           span_name="HTTP POST coverage.production.grnds.com"
         }[5m]))
       dataSource: metrics
-      runbookURL: https://includedhealth.atlassian.net/browse/DP-5538
+      runbookURL: https://github.com/ConsultingMD/coverage/blob/main/docs/runbooks/rte-traffic-spike-runbook.md
       configs:
         production:
-          severity: critical
-          threshold: 2.0
+          severity: warning
+          threshold: 5.0
           gracePeriod: 5m
           condition: above
           alertOnNoData: false
@@ -60,7 +62,7 @@
           span_name="HTTP POST coverage.production.grnds.com"
         }[5m])))
       dataSource: metrics
-      runbookURL: https://includedhealth.atlassian.net/browse/DP-5538
+      runbookURL: https://github.com/ConsultingMD/coverage/blob/main/docs/runbooks/rte-traffic-spike-runbook.md
       configs:
         default:
           severity: info
@@ -79,7 +81,7 @@
           span_name="HTTP POST coverage.production.grnds.com"
         }[5m]))
       dataSource: metrics
-      runbookURL: https://includedhealth.atlassian.net/browse/INC-882
+      runbookURL: https://github.com/ConsultingMD/coverage/blob/main/docs/runbooks/rte-traffic-spike-runbook.md
       configs:
         production:
           severity: warning
@@ -98,7 +100,7 @@
           span_name=~".*rte.*|.*RTE.*"
         }[5m])))
       dataSource: metrics
-      runbookURL: https://includedhealth.atlassian.net/browse/DP-5538
+      runbookURL: https://github.com/ConsultingMD/coverage/blob/main/docs/runbooks/rte-traffic-spike-runbook.md
       configs:
         production:
           severity: warning
@@ -122,7 +124,7 @@
           status_code=~"5.*"
         }[5m]))
       dataSource: metrics
-      runbookURL: https://includedhealth.atlassian.net/browse/DP-5538
+      runbookURL: https://github.com/ConsultingMD/coverage/blob/main/docs/runbooks/rte-traffic-spike-runbook.md
       configs:
         production:
           severity: warning
@@ -134,23 +136,25 @@
     - name: realtime-eligibility Service Request Rate
       description: |
         Direct monitoring of realtime-eligibility service inbound requests.
-        Baseline ~5-10 req/s, spike detection for >50 req/s.
+        With 50 workers (increased from 15), baseline capacity is ~50 req/s.
+        Alert on sustained high rate >150 req/s indicating potential overload.
+        NOTE: Set to warning while validating new thresholds after worker increase.
       query: |
         sum(rate(traces_spanmetrics_calls_total{
           service="realtime-eligibility"
         }[5m]))
       dataSource: metrics
-      runbookURL: https://includedhealth.atlassian.net/browse/DP-5538
+      runbookURL: https://github.com/ConsultingMD/coverage/blob/main/docs/runbooks/rte-traffic-spike-runbook.md
       configs:
         production:
-          severity: critical
-          threshold: 50
+          severity: warning
+          threshold: 150
           gracePeriod: 5m
           condition: above
           alertOnNoData: false
         uat:
           severity: warning
-          threshold: 75
+          threshold: 200
           gracePeriod: 5m
           condition: above
           alertOnNoData: false
@@ -165,7 +169,7 @@
           span_name="HTTP POST coverage.production.grnds.com"
         }[5m]))
       dataSource: metrics
-      runbookURL: https://includedhealth.atlassian.net/browse/DP-5538
+      runbookURL: https://github.com/ConsultingMD/coverage/blob/main/docs/runbooks/rte-traffic-spike-runbook.md
       configs:
         default:
           severity: info
@@ -184,7 +188,7 @@
           span_name="HTTP POST coverage.production.grnds.com"
         }[5m]))
       dataSource: metrics
-      runbookURL: https://includedhealth.atlassian.net/browse/DP-5538
+      runbookURL: https://github.com/ConsultingMD/coverage/blob/main/docs/runbooks/rte-traffic-spike-runbook.md
       configs:
         production:
           severity: warning
@@ -203,7 +207,7 @@
           operation_name="rteProxy"
         }[5m]))
       dataSource: metrics
-      runbookURL: https://includedhealth.atlassian.net/browse/DP-5538
+      runbookURL: https://github.com/ConsultingMD/coverage/blob/main/docs/runbooks/rte-traffic-spike-runbook.md
       configs:
         default:
           severity: info
@@ -221,7 +225,7 @@
           operation_name="warmRteCache"
         }[5m]))
       dataSource: metrics
-      runbookURL: https://includedhealth.atlassian.net/browse/DP-5538
+      runbookURL: https://github.com/ConsultingMD/coverage/blob/main/docs/runbooks/rte-traffic-spike-runbook.md
       configs:
         default:
           severity: info
