@@ -135,13 +135,15 @@
 
     - name: realtime-eligibility Service Request Rate
       description: |
-        Direct monitoring of realtime-eligibility service inbound requests.
+        Direct monitoring of realtime-eligibility service inbound RTEProxyAsync requests.
+        Excludes RTEProxyPollingStatus calls (which are expected to be higher volume).
         With 50 workers (increased from 15), baseline capacity is ~50 req/s.
         Alert on sustained high rate >150 req/s indicating potential overload.
         NOTE: Set to warning while validating new thresholds after worker increase.
       query: |
         sum(rate(traces_spanmetrics_calls_total{
-          service="realtime-eligibility"
+          service="realtime-eligibility",
+          span_name=~".*RTEProxyAsync.*"
         }[5m]))
       dataSource: metrics
       runbookURL: https://github.com/ConsultingMD/coverage/blob/main/docs/runbooks/rte-traffic-spike-runbook.md
