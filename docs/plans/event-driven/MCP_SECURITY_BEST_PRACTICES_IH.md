@@ -33,7 +33,7 @@ digital_twin_mcp:
     - careflow.includedhealth.com  # Internal service
     - rte.includedhealth.com       # Internal service
     - brain.includedhealth.com     # Internal service
-  
+
   # Each backend service has separate auth
   service_auth:
     careflow: service-to-service JWT
@@ -48,12 +48,12 @@ digital_twin_mcp:
 func (twin *MemberTwin) fetchCareFlowData(ctx context.Context, memberID string) {
     // Use service account, NOT client token
     serviceToken := twin.getServiceToken("careflow")
-    
+
     req := &careflow.Request{
         MemberID: memberID,
     }
     req.SetAuth(serviceToken)  // Service-to-service auth
-    
+
     // Client token NEVER sent to backend
 }
 ```
@@ -68,7 +68,7 @@ Token passthrough is when an MCP server accepts client tokens and forwards them 
 graph LR
     CLIENT[MCP Client] -->|Token A| MCP[MCP Server]
     MCP -->|Token A ❌| API[Backend API]
-    
+
     style MCP fill:#ff9999
 ```
 
@@ -87,15 +87,15 @@ func (twin *MemberTwin) badExample(clientToken string) {
 func (twin *MemberTwin) correctImplementation(ctx context.Context) {
     // 1. Validate client token (from MCP client)
     clientClaims := twin.validateClientToken(ctx)
-    
+
     // 2. Check authorization with Authzed
     if !twin.authzed.Check(clientClaims.Subject, "read", "member:M123") {
         return ErrUnauthorized
     }
-    
+
     // 3. Use SEPARATE service token for backend
     serviceToken := twin.auth.GetServiceToken("careflow")
-    
+
     // 4. Call backend with service token
     response := careflowClient.Call(serviceToken, request)
 }
@@ -109,22 +109,22 @@ func (twin *MemberTwin) validateClientToken(token string) error {
     if err != nil {
         return ErrInvalidToken
     }
-    
+
     // MUST validate audience
     if !contains(claims.Audience, "mcp://twins/member") {
         return ErrInvalidAudience  // Token not for this server
     }
-    
+
     // MUST validate issuer
     if claims.Issuer != "https://authzilla.includedhealth.com" {
         return ErrInvalidIssuer
     }
-    
+
     // MUST check expiration
     if time.Now().After(claims.ExpiresAt) {
         return ErrTokenExpired
     }
-    
+
     return nil
 }
 ```
@@ -160,12 +160,12 @@ type SecureDigitalTwin struct {
 func (s *SecureDigitalTwin) HandleRequest(ctx context.Context, token string) {
     // MUST validate token on EVERY request
     claims := s.validateToken(token)
-    
+
     // Check with Authzed on EVERY request
     if !s.authzed.Check(claims.Subject, action, resource) {
         return ErrUnauthorized
     }
-    
+
     // Process request
 }
 ```
@@ -184,7 +184,7 @@ type WebSocketConnection struct {
 func (ws *WebSocketGateway) HandleConnection(conn *websocket.Conn, token string) {
     // 1. Validate token
     claims := ws.validateToken(token)
-    
+
     // 2. Create connection with user binding
     wsConn := &WebSocketConnection{
         ID:     uuid.New().String(),  // Cryptographically random
@@ -192,11 +192,11 @@ func (ws *WebSocketGateway) HandleConnection(conn *websocket.Conn, token string)
         Token:  token,
         Expiry: claims.ExpiresAt,
     }
-    
+
     // 3. Store with user binding as key
     key := fmt.Sprintf("%s:%s", claims.Subject, wsConn.ID)
     ws.connections.Store(key, wsConn)
-    
+
     // 4. Periodically revalidate
     go ws.revalidateConnection(wsConn)
 }
@@ -214,22 +214,22 @@ func (ws *WebSocketGateway) HandleConnection(conn *websocket.Conn, token string)
 // MCP client implementation
 class MCPClient {
   private codeVerifier: string;
-  
+
   async startAuth() {
     // Generate cryptographically random verifier
     this.codeVerifier = base64url(crypto.randomBytes(32));
-    
+
     // Create challenge
     const challenge = base64url(sha256(this.codeVerifier));
-    
+
     // Include in authorization request
     const authUrl = new URL(authEndpoint);
     authUrl.searchParams.set('code_challenge', challenge);
     authUrl.searchParams.set('code_challenge_method', 'S256');
-    
+
     // ... rest of OAuth flow
   }
-  
+
   async exchangeCode(code: string) {
     // Include verifier in token exchange
     const response = await fetch(tokenEndpoint, {
@@ -291,17 +291,17 @@ func (twin *MemberTwin) validateRequest(r *http.Request) error {
         return ErrMissingAuth
     }
     token := strings.TrimPrefix(auth, "Bearer ")
-    
+
     // 2. Validate token
     if err := twin.validateToken(token); err != nil {
         return err
     }
-    
+
     // 3. Check rate limits
     if err := twin.rateLimiter.Check(token); err != nil {
         return ErrRateLimited
     }
-    
+
     // 4. Log for audit
     twin.auditLog.Log(AuditEntry{
         Token:     hashToken(token),
@@ -309,7 +309,7 @@ func (twin *MemberTwin) validateRequest(r *http.Request) error {
         Action:    r.Method,
         Timestamp: time.Now(),
     })
-    
+
     return nil
 }
 ```
@@ -369,26 +369,26 @@ graph TB
         CLIENT[MCP Client]
         TOKEN[OAuth Token]
     end
-    
+
     subgraph "Digital Twin MCP Server"
         VALIDATE[Token Validation]
         AUTHZED[Authzed Check]
         SERVICE[Service Auth]
     end
-    
+
     subgraph "Backend Services"
         CAREFLOW[CareFlow]
         RTE[RTE Service]
         BRAIN[The Brain]
     end
-    
+
     CLIENT -->|Bearer Token| VALIDATE
     VALIDATE -->|Claims| AUTHZED
     AUTHZED -->|Authorized| SERVICE
     SERVICE -->|Service Token| CAREFLOW
     SERVICE -->|mTLS| RTE
     SERVICE -->|API Key| BRAIN
-    
+
     style VALIDATE fill:#90EE90
     style AUTHZED fill:#90EE90
     style SERVICE fill:#87CEEB

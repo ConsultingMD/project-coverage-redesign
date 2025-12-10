@@ -68,18 +68,18 @@
 if acquiredLock {
     result := executeUpstream()
     cacheResult(result)
-    
+
     // PRIMARY: Publish via Redis Pub/Sub (fast)
     redisPubSub.Publish(cacheKey, result)
-    
+
 } else {
     // HYBRID WAIT STRATEGY
     // 1. Subscribe to Pub/Sub (optimistic, ~5-50ms)
     pubSubChan := redisPubSub.Subscribe(cacheKey)
-    
+
     // 2. Start polling fallback (pessimistic, ~100-500ms)
     pollTimer := time.NewTicker(100 * time.Millisecond)
-    
+
     select {
     case result := <-pubSubChan:
         return result  // Fast path
@@ -165,7 +165,7 @@ graph TB
         C[Frontend Client<br/>iOS/Android/Web]
         SDK[IncludedHealth SDK]
     end
-    
+
     subgraph "WebSocket Gateway (Bayeux-Inspired)"
         CONN[Connection Manager]
         AUTH[JWT Auth]
@@ -173,27 +173,27 @@ graph TB
         FILTER[Event Filter]
         TRANS[Transport Adapter]
     end
-    
+
     subgraph "Transport Strategies"
         WS[WebSocket<br/>Primary]
         SSE[Server-Sent Events<br/>Fallback 1]
         LP[Long-Polling<br/>Fallback 2]
         POLL[Short-Polling<br/>Fallback 3]
     end
-    
+
     subgraph "Backend"
         KAFKA[Kafka Event Stream]
         REDIS[Redis Pub/Sub]
         API[REST API<br/>Fallback]
     end
-    
+
     C -->|Connect| SDK
     SDK -->|Negotiate| CONN
     CONN --> AUTH
     AUTH --> SUB
     SUB --> FILTER
     FILTER --> TRANS
-    
+
     TRANS -->|Try| WS
     WS -->|Success| KAFKA
     WS -->|Fail| SSE
@@ -201,11 +201,11 @@ graph TB
     SSE -->|Fail| LP
     LP -->|Success| API
     LP -->|Fail| POLL
-    
+
     KAFKA -->|Events| FILTER
     REDIS -->|Events| FILTER
     API -->|Poll| FILTER
-    
+
     FILTER -->|Push| TRANS
     TRANS -->|Deliver| SDK
     SDK -->|Display| C
@@ -232,12 +232,12 @@ func (g *Gateway) NegotiateTransport(ctx context.Context, clientCaps ClientCapab
     if clientCaps.SupportsWebSocket && g.healthCheck.WebSocketHealthy() {
         return WebSocketTransport
     }
-    
+
     // Fallback to long-polling (acceptable)
     if g.healthCheck.KafkaHealthy() {
         return LongPollingTransport
     }
-    
+
     // Last resort: client polls REST API
     return APIPollingTransport
 }
@@ -276,21 +276,21 @@ type Connection struct {
 func (c *Connection) HandleDisconnect() {
     c.State = Reconnecting
     c.ReconnectCount++
-    
+
     // Exponential backoff (like Bayeux)
     backoff := time.Duration(math.Pow(2, float64(c.ReconnectCount))) * time.Second
     maxBackoff := 30 * time.Second
     if backoff > maxBackoff {
         backoff = maxBackoff
     }
-    
+
     time.Sleep(backoff)
-    
+
     // Try next transport strategy
     if c.Transport == WebSocketTransport {
         c.Transport = LongPollingTransport
     }
-    
+
     c.Reconnect()
 }
 ```
@@ -322,7 +322,7 @@ client.Subscribe("/member/:memberId/rte/*", func(event Event) {
 // Wildcard matching (efficient)
 func (g *Gateway) MatchSubscriptions(eventChannel string) []*Connection {
     matches := []*Connection{}
-    
+
     for conn := range g.connections {
         for _, sub := range conn.Subscriptions {
             if matchesPattern(sub.Pattern, eventChannel) {
@@ -330,7 +330,7 @@ func (g *Gateway) MatchSubscriptions(eventChannel string) []*Connection {
             }
         }
     }
-    
+
     return matches
 }
 ```
@@ -353,13 +353,13 @@ func (c *Client) SendMessage(msg *Message) error {
     if msg.AckRequired {
         // Store for retry
         c.pendingMessages.Add(msg.ID, msg)
-        
+
         // Send with ack request
         err := c.transport.Send(msg)
         if err != nil {
             return err
         }
-        
+
         // Wait for ack (with timeout)
         select {
         case <-c.acks[msg.ID]:
@@ -370,7 +370,7 @@ func (c *Client) SendMessage(msg *Message) error {
             return c.retryMessage(msg)
         }
     }
-    
+
     // Fire-and-forget for non-critical
     return c.transport.Send(msg)
 }
@@ -424,33 +424,33 @@ graph TB
     subgraph "Client"
         GQL[GraphQL Client]
     end
-    
+
     subgraph "Apollo Router"
         ROUTER[Apollo Router]
     end
-    
+
     subgraph "WebSocket Gateway"
         WS[WebSocket Connection]
         SUB[Subscription Manager]
     end
-    
+
     subgraph "Backend"
         COV[coverage-server]
         RTE[realtime-eligibility]
         KAFKA[Kafka]
     end
-    
+
     GQL -->|Subscription| ROUTER
     ROUTER -->|Delegate| WS
     WS --> SUB
     SUB -->|Subscribe| KAFKA
-    
+
     RTE -->|Publish| KAFKA
     KAFKA -->|Events| SUB
     SUB -->|Push| WS
     WS -->|GraphQL Response| ROUTER
     ROUTER -->|Stream| GQL
-    
+
     style ROUTER fill:#e1f5ff
     style WS fill:#ffe1e1
 ```
@@ -510,10 +510,10 @@ ws.subscribe('/member/:id/rte/*');
 service RTEService {
   // Unary RPC (current)
   rpc CheckEligibility(CheckEligibilityRequest) returns (CheckEligibilityResponse);
-  
+
   // Server-side streaming (NEW)
   rpc StreamEligibilityUpdates(StreamRequest) returns (stream EligibilityUpdate);
-  
+
   // Bidirectional streaming (FUTURE)
   rpc BidirectionalChat(stream ChatMessage) returns (stream ChatMessage);
 }
@@ -533,10 +533,10 @@ service RTEService {
 service RTEService {
   // Step 1: Submit async request
   rpc CheckEligibilityAsync(CheckEligibilityRequest) returns (CheckEligibilityHandle);
-  
+
   // Step 2: Client subscribes to events via WebSocket Gateway
   // (No new RPC needed, use WebSocket directly)
-  
+
   // Step 3: Poll for result (fallback)
   rpc GetEligibilityResult(CheckEligibilityHandle) returns (CheckEligibilityResponse);
 }
@@ -587,32 +587,32 @@ const pollTimer = setInterval(async () => {
 class RTEEventClient {
   private ws: WebSocket;
   private pollTimer: NodeJS.Timer;
-  
+
   async waitForResult(workflowId: string): Promise<RTEResult> {
     return new Promise((resolve, reject) => {
       let receivedViaWebSocket = false;
-      
+
       // PRIMARY: WebSocket push
       this.ws.subscribe(`/rte/workflow/${workflowId}`, (event) => {
         receivedViaWebSocket = true;
         clearInterval(this.pollTimer);
         resolve(event.payload);
       });
-      
+
       // FALLBACK: Polling (starts immediately, runs in parallel)
       this.pollTimer = setInterval(async () => {
         if (receivedViaWebSocket) {
           clearInterval(this.pollTimer);
           return;
         }
-        
+
         const result = await this.apiClient.getRTEResult(workflowId);
         if (result) {
           clearInterval(this.pollTimer);
           resolve(result);
         }
       }, 2000);  // Poll every 2 seconds
-      
+
       // Timeout (60 seconds)
       setTimeout(() => {
         clearInterval(this.pollTimer);
@@ -632,28 +632,28 @@ class VideoVisitEventClient {
   async waitForCallEnded(callId: string): Promise<CallEndStatus> {
     return new Promise((resolve) => {
       let lastWebSocketEvent = Date.now();
-      
+
       // PRIMARY: WebSocket events
       this.ws.subscribe(`/video-visit/call/${callId}`, (event) => {
         lastWebSocketEvent = Date.now();
-        
+
         if (event.type === 'call.ended') {
           // CRITICAL: Always verify with API (iOS pattern)
           this.apiClient.getCallStatus(callId).then(resolve);
         }
       });
-      
+
       // Heartbeat check (detect WebSocket failure)
       const heartbeatTimer = setInterval(() => {
         const sinceLastEvent = Date.now() - lastWebSocketEvent;
-        
+
         if (sinceLastEvent > 30000) {  // 30 seconds no events
           console.warn('WebSocket may be dead, switching to polling');
           this.startPolling(callId, resolve);
           clearInterval(heartbeatTimer);
         }
       }, 10000);  // Check every 10 seconds
-      
+
       // FALLBACK: Polling (triggered by heartbeat failure)
       const startPolling = (callId: string, resolve: Function) => {
         const pollTimer = setInterval(async () => {
@@ -759,37 +759,37 @@ export class IncludedHealthWebSocket {
   private ws: WebSocket | null = null;
   private transport: 'websocket' | 'polling' = 'websocket';
   private subscriptions: Map<string, EventHandler> = new Map();
-  
+
   async connect(config: WebSocketConfig): Promise<void> {
     try {
       // PRIMARY: Try WebSocket
       this.transport = 'websocket';
       this.ws = new WebSocket(`${config.url}?token=${config.auth.token}`);
-      
+
       this.ws.onopen = () => {
         console.log('WebSocket connected');
         this.resubscribeAll();  // Re-subscribe after reconnect
       };
-      
+
       this.ws.onmessage = (event) => {
         const message = JSON.parse(event.data);
         this.handleMessage(message);
       };
-      
+
       this.ws.onclose = () => {
         console.warn('WebSocket closed, falling back to polling');
         this.fallbackToPolling(config);
       };
-      
+
     } catch (err) {
       console.error('WebSocket connection failed, falling back to polling', err);
       this.fallbackToPolling(config);
     }
   }
-  
+
   private fallbackToPolling(config: WebSocketConfig): void {
     this.transport = 'polling';
-    
+
     // Poll every 2 seconds
     setInterval(async () => {
       for (const [channel, handler] of this.subscriptions) {
@@ -798,10 +798,10 @@ export class IncludedHealthWebSocket {
       }
     }, 2000);
   }
-  
+
   subscribe(channel: string, handler: EventHandler): void {
     this.subscriptions.set(channel, handler);
-    
+
     if (this.transport === 'websocket' && this.ws) {
       // Send subscription message
       this.ws.send(JSON.stringify({
@@ -811,12 +811,12 @@ export class IncludedHealthWebSocket {
     }
     // Polling automatically includes all subscriptions
   }
-  
+
   private handleMessage(message: any): void {
     const handler = this.subscriptions.get(message.channel);
     if (handler) {
       handler(message);
-      
+
       // Send acknowledgment for critical messages
       if (message.ackRequired) {
         this.ws?.send(JSON.stringify({
@@ -826,7 +826,7 @@ export class IncludedHealthWebSocket {
       }
     }
   }
-  
+
   private resubscribeAll(): void {
     // Re-send all subscriptions after reconnect
     for (const channel of this.subscriptions.keys()) {
@@ -872,7 +872,7 @@ func (g *Gateway) HandleConnection(w http.ResponseWriter, r *http.Request) {
         log.Error("WebSocket upgrade failed", zap.Error(err))
         return
     }
-    
+
     // Authenticate
     token := r.URL.Query().Get("token")
     claims, err := g.validateJWT(token)
@@ -880,7 +880,7 @@ func (g *Gateway) HandleConnection(w http.ResponseWriter, r *http.Request) {
         conn.Close()
         return
     }
-    
+
     // Create connection record
     connection := &Connection{
         ws:            conn,
@@ -889,15 +889,15 @@ func (g *Gateway) HandleConnection(w http.ResponseWriter, r *http.Request) {
         lastHeartbeat: time.Now(),
         state:         Connected,
     }
-    
+
     g.connections[connection.clientID] = connection
-    
+
     // Start heartbeat monitor
     go g.monitorHeartbeat(connection)
-    
+
     // Start event listener
     go g.listenForEvents(connection)
-    
+
     // Start message handler
     g.handleMessages(connection)
 }
@@ -905,12 +905,12 @@ func (g *Gateway) HandleConnection(w http.ResponseWriter, r *http.Request) {
 func (g *Gateway) monitorHeartbeat(conn *Connection) {
     ticker := time.NewTicker(30 * time.Second)
     defer ticker.Stop()
-    
+
     for range ticker.C {
         if time.Since(conn.lastHeartbeat) > 60*time.Second {
             log.Warn("Heartbeat timeout, connection may be dead",
                 zap.String("clientID", conn.clientID))
-            
+
             // Try to send ping
             err := conn.ws.WriteMessage(websocket.PingMessage, []byte{})
             if err != nil {
@@ -930,21 +930,21 @@ func (g *Gateway) handleMessages(conn *Connection) {
             g.closeConnection(conn)
             return
         }
-        
+
         // Update heartbeat
         conn.lastHeartbeat = time.Now()
-        
+
         if messageType == websocket.PongMessage {
             continue
         }
-        
+
         var msg Message
         err = json.Unmarshal(payload, &msg)
         if err != nil {
             log.Error("Invalid message", zap.Error(err))
             continue
         }
-        
+
         switch msg.Type {
         case "subscribe":
             g.handleSubscribe(conn, msg.Channel)
@@ -959,13 +959,13 @@ func (g *Gateway) handleMessages(conn *Connection) {
 func (g *Gateway) listenForEvents(conn *Connection) {
     // Subscribe to Kafka events
     kafkaChan := g.kafka.Subscribe(conn.subscriptions...)
-    
+
     for event := range kafkaChan {
         // Filter by member_id
         if event.MemberID != conn.clientID {
             continue
         }
-        
+
         // Send to client
         message := Message{
             ID:          event.ID,
@@ -974,19 +974,19 @@ func (g *Gateway) listenForEvents(conn *Connection) {
             Data:        event.Data,
             AckRequired: event.Critical,  // RTE and video visits require ack
         }
-        
+
         err := conn.ws.WriteJSON(message)
         if err != nil {
             log.Error("Failed to send message", zap.Error(err))
-            
+
             // If critical message, retry or store for polling fallback
             if message.AckRequired {
                 g.storeForPolling(conn.clientID, message)
             }
-            
+
             continue
         }
-        
+
         // Wait for ack if required
         if message.AckRequired {
             go g.waitForAck(conn, message)
@@ -997,13 +997,13 @@ func (g *Gateway) listenForEvents(conn *Connection) {
 func (g *Gateway) waitForAck(conn *Connection, msg Message) {
     timeout := time.After(5 * time.Second)
     ackChan := g.ackChannels[msg.ID]
-    
+
     select {
     case <-ackChan:
         log.Debug("Message acknowledged", zap.String("messageID", msg.ID))
         return
     case <-timeout:
-        log.Warn("Ack timeout, storing for polling fallback", 
+        log.Warn("Ack timeout, storing for polling fallback",
             zap.String("messageID", msg.ID))
         g.storeForPolling(conn.clientID, msg)
     }
@@ -1027,7 +1027,7 @@ package api
 func (h *Handler) PollEvents(c *gin.Context) {
     memberID := c.Query("member_id")
     since := c.Query("since")
-    
+
     // Get pending events from Redis
     key := fmt.Sprintf("pending_events:%s", memberID)
     events, err := h.redis.LRange(c.Request.Context(), key, 0, 100).Result()
@@ -1035,24 +1035,24 @@ func (h *Handler) PollEvents(c *gin.Context) {
         c.JSON(500, gin.H{"error": "Failed to fetch events"})
         return
     }
-    
+
     // Parse and filter events
     var messages []Message
     for _, eventJSON := range events {
         var msg Message
         json.Unmarshal([]byte(eventJSON), &msg)
-        
+
         // Filter by timestamp
         if msg.Timestamp > since {
             messages = append(messages, msg)
         }
     }
-    
+
     c.JSON(200, gin.H{
         "events": messages,
         "count": len(messages),
     })
-    
+
     // Clean up delivered events
     if len(messages) > 0 {
         h.redis.LTrim(c.Request.Context(), key, int64(len(messages)), -1)
@@ -1121,4 +1121,3 @@ func (h *Handler) PollEvents(c *gin.Context) {
 5. **Add message acknowledgment** for critical events (Weeks 9-12)
 6. **Extend to video visits** (Weeks 13-16)
 7. **Deprecate Pusher Channels** (Weeks 17-20)
-

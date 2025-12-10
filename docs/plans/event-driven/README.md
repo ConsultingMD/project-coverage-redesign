@@ -16,7 +16,7 @@ This directory contains the complete technical specification and planning docume
 
 **[EVENT_DRIVEN_INDEX.md](./EVENT_DRIVEN_INDEX.md)** (1,378 lines)
 - **Purpose**: Navigation guide for all documentation
-- **Contents**: 
+- **Contents**:
   - Quick start guides by role (Backend, Frontend, Platform, Product)
   - How documents relate to each other
   - FAQ section

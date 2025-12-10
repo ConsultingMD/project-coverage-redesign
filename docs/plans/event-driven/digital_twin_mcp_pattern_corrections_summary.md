@@ -13,7 +13,7 @@
 "Create a Digital Twin MCP pattern for Included Health..."
 
 # To:
-"Implement an MCP interface for the Digital Twin Platform, which is 
+"Implement an MCP interface for the Digital Twin Platform, which is
 already defined as the 'Sense' layer in IH's 2025 Tech Vision..."
 ```
 
@@ -46,7 +46,7 @@ These are accurately described and don't need correction:
 
 - ✅ **CareFlow**: Service requests, deliveries, tasks, care plans
 - ✅ **The Brain / Recommendation Platform**: Next Best Actions
-- ✅ **Air Traffic Control (ATC)**: Outreach timing/channel optimization  
+- ✅ **Air Traffic Control (ATC)**: Outreach timing/channel optimization
 - ✅ **Agent Platform**: Session management, routing, CareFlow integration
 - ✅ **Schema Registry**: Type management with privacy annotations
 - ✅ **Temporal**: Workflow orchestration
@@ -92,13 +92,13 @@ Replace the current opening with:
 
 ## Executive Summary
 
-This document defines the **MCP (Model Context Protocol) interface** for 
-Included Health's Digital Twin Platform, which is the "Sense" component 
+This document defines the **MCP (Model Context Protocol) interface** for
+Included Health's Digital Twin Platform, which is the "Sense" component
 of the company's 2025 Tech Vision Sense-Decide-Act architecture.
 
-The Digital Twin Platform itself is already approved and under development. 
-This proposal specifies how AI agents and applications will interact with 
-Digital Twins through a simple, three-verb MCP interface inspired by the 
+The Digital Twin Platform itself is already approved and under development.
+This proposal specifies how AI agents and applications will interact with
+Digital Twins through a simple, three-verb MCP interface inspired by the
 successful Omnibus MCP pattern already in use at IH.
 
 ## Building on Existing Infrastructure

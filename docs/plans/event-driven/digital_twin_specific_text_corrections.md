@@ -8,7 +8,7 @@
 
 **Suggested Addition After**:
 > Today, building agentic experiences at Included Health requires each team to:
-> 
+>
 > [Note: This challenge is recognized in the 2025 Tech Vision, which defines the Digital Twin Platform as the solution for unified member representation.]
 
 ### Line 22: Vision Section
@@ -23,9 +23,9 @@
 ```markdown
 **Relationship to 2025 Tech Vision**
 
-The Digital Twin MCP pattern implements the interface layer for the Digital Twin Platform, 
-which is already defined as the "Sense" component in IH's official 2025 Sense-Decide-Act 
-architecture. This MCP interface provides the standard way for agents and applications 
+The Digital Twin MCP pattern implements the interface layer for the Digital Twin Platform,
+which is already defined as the "Sense" component in IH's official 2025 Sense-Decide-Act
+architecture. This MCP interface provides the standard way for agents and applications
 to interact with the Digital Twin's real-time member model.
 ```
 
@@ -71,7 +71,7 @@ to interact with the Digital Twin's real-time member model.
 **Add Clarification**:
 ```markdown
 - Stored in proto-store or another durable store keyed by member_id and context
-  [Note: Proto-store integrates with Schema Registry for type management and 
+  [Note: Proto-store integrates with Schema Registry for type management and
    Kafka for event streaming. Other persistence layers may include domain-specific stores.]
 ```
 
@@ -80,7 +80,7 @@ to interact with the Digital Twin's real-time member model.
 > MemberTwin will initially roll out as a **walking skeleton**...
 
 **Suggested**:
-> The MemberTwin MCP interface will initially roll out as a **walking skeleton** 
+> The MemberTwin MCP interface will initially roll out as a **walking skeleton**
 > connecting to the Digital Twin Platform infrastructure...
 
 ---
@@ -94,15 +94,15 @@ Add after introduction:
 
 Included Health already has a growing MCP ecosystem that this pattern builds upon:
 
-- **Omnibus MCP**: Demonstrates the search/readDocument pattern for documentation, 
+- **Omnibus MCP**: Demonstrates the search/readDocument pattern for documentation,
   serving as the model for the Digital Twin's interface
-- **MCProxy**: Provides unified access to multiple MCP servers, which could 
+- **MCProxy**: Provides unified access to multiple MCP servers, which could
   aggregate Digital Twin servers across domains
 - **GitHub MCP**: Shows integration patterns for external systems
-- **Service MCPs**: Configured via go-common, providing patterns for 
+- **Service MCPs**: Configured via go-common, providing patterns for
   service-specific MCP implementations
 
-The Digital Twin MCP interface follows these established patterns while 
+The Digital Twin MCP interface follows these established patterns while
 extending them for person-centric, privacy-aware data access.
 ```
 
@@ -124,11 +124,11 @@ rather than creating new session management capabilities.
 Add prominent callout box:
 ```markdown
 > **Official 2025 Tech Vision Components**
-> 
+>
 > - **Sense**: Digital Twin Platform (real-time member model) - THIS MCP INTERFACE
 > - **Decide**: The Brain / Recommendation Platform (NBA generation)
 > - **Act**: CareFlow + Agent Platform (workflow execution)
-> 
+>
 > This document defines how agents interact with the Sense layer through MCP tools.
 ```
 

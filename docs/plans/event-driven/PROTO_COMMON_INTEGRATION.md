@@ -1,7 +1,7 @@
 # Proto-Common Integration for Event-Driven Architecture
 
-**Status**: Design Document  
-**Last Updated**: November 13, 2024  
+**Status**: Design Document
+**Last Updated**: November 13, 2024
 **Related**: [EVENT_DRIVEN_RTE_PLAN.md](EVENT_DRIVEN_RTE_PLAN.md), [DIGITAL_SESSION_PLATFORM_PLAN.md](DIGITAL_SESSION_PLATFORM_PLAN.md)
 
 ---
@@ -114,16 +114,16 @@ Examples:
 message Header {
   // The UUID of the event
   string event_uuid = 1;
-  
+
   // The timestamp for when the event occurred
   google.protobuf.Timestamp timestamp = 2;
-  
+
   // The open telemetry trace ID of the request that triggered the event
   string trace_id = 3;
-  
+
   // The services which initiated or interacted with this event
   Provenance provenance = 4;
-  
+
   // The device ID of the client emitting the event
   optional string device_id = 5;
 }
@@ -138,7 +138,7 @@ message Header {
 message Provenance {
   // The deployed service which is the ultimate origin of the event
   ServiceInfo origin = 1;
-  
+
   // All services who have had interactions with this event
   repeated Interaction interactions = 2;
 }
@@ -199,28 +199,28 @@ import "shared/events/v1/header.proto";
 message MemberAuthnEvent {
   // The header of the event
   shared.events.v1.Header header = 1;
-  
+
   // Type of authentication event
   EventType type = 2;
-  
+
   // Whether the event represents success or failure
   bool success = 3;
-  
+
   // The type of credentials used
   CredentialType credential_type = 4;
-  
+
   // IH Account ID of the member (may be empty)
   string account_id = 5;
-  
+
   // Member identity in auth service (safe harbor: OPEN_TEXT_FIELD for legacy IDs)
   string login_id = 6 [(annotations.v1.safe_harbor) = OPEN_TEXT_FIELD];
-  
+
   // Member's email (safe harbor: EMAIL)
   string email = 7 [(annotations.v1.safe_harbor) = EMAIL];
-  
+
   // Hashed login_id for joins (sha-224)
   string hashed_login_id = 13;
-  
+
   enum EventType {
     UNSPECIFIED = 0;
     SIGNIN = 1;
@@ -229,7 +229,7 @@ message MemberAuthnEvent {
     PASSWORD_RESET_REQUEST = 6;
     PASSWORD_RESET = 7;
   }
-  
+
   enum CredentialType {
     CT_UNSPECIFIED = 0;
     USERNAME_PASSWORD = 1;
@@ -252,13 +252,13 @@ From `annotations/v1/safe_harbor.proto`:
 ```protobuf
 enum SafeHarbor {
   UNSPECIFIED = 0;
-  
+
   // Personal identifiers
   FULL_NAME = 1;
   FIRST_NAME = 2;
   MIDDLE_NAME = 29;
   LAST_NAME = 3;
-  
+
   // Contact information
   ADDRESS = 4;
   CITY = 5;
@@ -267,12 +267,12 @@ enum SafeHarbor {
   PHONE = 11;
   FAX = 12;
   EMAIL = 13;
-  
+
   // Dates
   BIRTH_DATE = 8;
   SERVICE_DATE = 9;
   OTHER_DATE = 10;
-  
+
   // Identifiers
   SSN = 14;
   SSN_LAST_4 = 15;
@@ -284,13 +284,13 @@ enum SafeHarbor {
   DEVICE_SERIAL_NUMBER = 21;
   UNIQUE_ID = 26;
   CC_LAST_4 = 30;
-  
+
   // Other
   URL = 22;
   IP_ADDRESS = 23;
   BIOMETRIC = 24;
   PHOTOGRAPH = 25;
-  
+
   // IH-specific
   OPEN_TEXT_FIELD = 27;       // For unstructured text (notes, comments)
   PLACEHOLDER_SCRUB = 28;     // Not yet analyzed, scrub by default
@@ -304,17 +304,17 @@ enum SafeHarbor {
 ```protobuf
 message CareTaskEvent {
   shared.events.v1.Header header = 1;
-  
+
   // No annotation: non-PHI
   string task_id = 2;
   TaskStatus status = 3;
-  
+
   // Safe Harbor annotations for PHI
   string member_name = 4 [(annotations.v1.safe_harbor) = FULL_NAME];
   string member_email = 5 [(annotations.v1.safe_harbor) = EMAIL];
   string assignee_name = 6 [(annotations.v1.safe_harbor) = FULL_NAME];
   string notes = 7 [(annotations.v1.safe_harbor) = OPEN_TEXT_FIELD];
-  
+
   // Hashed identifiers for joins (no PHI)
   string hashed_member_id = 8;
 }
@@ -419,20 +419,20 @@ import "shared/events/v1/header.proto";
 // Emitted when RTE request is initiated (before Stedi call)
 message RTERequestInitiatedEvent {
   shared.events.v1.Header header = 1;
-  
+
   // Request identifiers
   string request_id = 2;          // Unique request ID
   string account_id = 3;           // Member account ID
-  
+
   // Payer/service info
   string trading_partner_id = 4;
   repeated string service_types = 5;
-  
+
   // Client context
   string originating_service = 6;  // e.g. "coverage-server"
   string request_path = 7;         // GraphQL operation or RPC method
   bool is_frontend_request = 8;    // User-facing vs batch
-  
+
   // Timing
   google.protobuf.Timestamp initiated_at = 9;
 }
@@ -446,25 +446,25 @@ message RTERequestInitiatedEvent {
 // Emitted when RTE request completes (success or failure)
 message RTERequestCompletedEvent {
   shared.events.v1.Header header = 1;
-  
+
   // Request identifiers
   string request_id = 2;
   string account_id = 3;
-  
+
   // Outcome
   RTEOutcome outcome = 4;
   optional string error_code = 5;      // Stedi DTE error code (80, 42, etc.)
   optional string error_message = 6 [(annotations.v1.safe_harbor) = OPEN_TEXT_FIELD];
-  
+
   // Response data
   optional string rte_log_id = 7;      // FK to RealtimeEligibilityLog
   bool has_active_coverage = 8;
-  
+
   // Timing (for P95/P99 metrics)
   google.protobuf.Timestamp completed_at = 9;
   int64 duration_ms = 10;
   int64 stedi_duration_ms = 11;        // Time in Stedi API call
-  
+
   enum RTEOutcome {
     UNSPECIFIED = 0;
     SUCCESS = 1;
@@ -485,21 +485,21 @@ message RTERequestCompletedEvent {
 // Emitted by Digital Twin when cache warming is triggered
 message RTECacheWarmingEvent {
   shared.events.v1.Header header = 1;
-  
+
   // Trigger source
   string prediction_id = 2;        // ML prediction that triggered warming
   PredictionType prediction_type = 3;
-  
+
   // Target member
   string account_id = 4;
-  
+
   // Payer list
   repeated string trading_partner_ids = 5;
-  
+
   // Timing
   google.protobuf.Timestamp predicted_access_time = 6;  // When member expected to need RTE
   int32 warmup_window_minutes = 7;                      // How early to warm cache
-  
+
   enum PredictionType {
     UNSPECIFIED = 0;
     APP_USAGE_LIKELY = 1;         // Member likely to open app
@@ -519,7 +519,7 @@ message RTECacheWarmingEvent {
 ```protobuf
 message RTERequestCompletedEvent {
   // ...
-  
+
   // FK reference to persisted RTE log
   optional string rte_log_id = 7 [(annotations.v1.reference) = {
     entity_type: "domain.coverage.realtime_eligibility.v1.RealtimeEligibilityLog"
@@ -553,27 +553,27 @@ import "shared/events/v1/header.proto";
 // Emitted when a member's digital session state changes
 message DigitalSessionEvent {
   shared.events.v1.Header header = 1;
-  
+
   // Session identifiers
   string session_id = 2;           // Unique session ID
   string account_id = 3;
-  
+
   // Session lifecycle
   SessionEvent event_type = 4;
-  
+
   // Client context
   ClientPlatform platform = 5;
   string app_version = 6;
   optional string device_id = 7;
-  
+
   // Session state
   google.protobuf.Timestamp session_started_at = 8;
   optional google.protobuf.Timestamp session_ended_at = 9;
-  
+
   // Screen/route context
   optional string current_screen = 10;  // e.g. "home", "find_care", "care_gap_detail"
   optional string previous_screen = 11;
-  
+
   enum SessionEvent {
     UNSPECIFIED = 0;
     SESSION_STARTED = 1;
@@ -581,7 +581,7 @@ message DigitalSessionEvent {
     SCREEN_VIEWED = 3;
     SESSION_ENDED = 4;
   }
-  
+
   enum ClientPlatform {
     PLATFORM_UNSPECIFIED = 0;
     WEB = 1;
@@ -600,20 +600,20 @@ message DigitalSessionEvent {
 // Emitted when a member performs an action in the app
 message MemberActionEvent {
   shared.events.v1.Header header = 1;
-  
+
   // Session context
   string session_id = 2;
   string account_id = 3;
-  
+
   // Action details
   ActionType action_type = 4;
   string action_target = 5;        // e.g. "find_care_button", "care_gap_12345"
   optional string screen = 6;
-  
+
   // Action metadata
   google.protobuf.Timestamp action_at = 7;
   map<string, string> action_data = 8;  // Flexible metadata
-  
+
   enum ActionType {
     UNSPECIFIED = 0;
     BUTTON_CLICKED = 1;
@@ -662,7 +662,7 @@ import "shared/events/v1/header.proto";
 message ServiceRequestMutation {
   // The header of the event
   shared.events.v1.Header header = 1;
-  
+
   // The change event that should be applied
   ServiceRequestChanged change = 2;
 }
@@ -685,22 +685,22 @@ import "shared/events/v1/header.proto";
 // Emitted when a practitioner views or edits a task
 message TaskPresenceEvent {
   shared.events.v1.Header header = 1;
-  
+
   // Task identifiers
   string service_request_id = 2;   // FK to ServiceRequest
   string service_delivery_id = 3;  // FK to ServiceDelivery (if exists)
-  
+
   // Practitioner context
   string practitioner_id = 4;
   string practitioner_name = 5 [(annotations.v1.safe_harbor) = FULL_NAME];
-  
+
   // Presence state
   PresenceAction action = 6;
   google.protobuf.Timestamp timestamp = 7;
-  
+
   // Optional: editing context
   optional string editing_field = 8;  // e.g. "notes", "status", "priority"
-  
+
   enum PresenceAction {
     UNSPECIFIED = 0;
     VIEWING = 1;          // Practitioner opened task
@@ -719,21 +719,21 @@ message TaskPresenceEvent {
 // Emitted when a task is assigned/reassigned
 message TaskAssignmentEvent {
   shared.events.v1.Header header = 1;
-  
+
   // Task identifiers
   string service_request_id = 2;
-  
+
   // Assignment details
   optional string previous_assignee_id = 3;
   string new_assignee_id = 4;
   string assigned_by_practitioner_id = 5;
-  
+
   // Context
   AssignmentReason reason = 6;
   optional string reason_description = 7;
-  
+
   google.protobuf.Timestamp assigned_at = 8;
-  
+
   enum AssignmentReason {
     UNSPECIFIED = 0;
     MANUAL_ASSIGNMENT = 1;
@@ -801,7 +801,7 @@ The current plan references **CloudEvents 1.0** format:
 ```protobuf
 message RTERequestCompletedEvent {
   shared.events.v1.Header header = 1;  // Contains: event_uuid, timestamp, trace_id, provenance
-  
+
   string request_id = 2;
   string account_id = 3;
   RTEOutcome outcome = 4;
@@ -979,4 +979,3 @@ import { RTECacheWarmingEvent } from '@includedhealth/proto-common/domain/covera
 ---
 
 **Next Steps**: Open PR in `proto-common` to add new event definitions, then update service implementations to emit/consume these events.
-

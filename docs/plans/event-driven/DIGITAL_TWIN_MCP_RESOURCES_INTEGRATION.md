@@ -20,36 +20,36 @@ graph TB
         CARE[.../care/summary]
         TASK[.../care/task/{id}]
     end
-    
+
     subgraph "MCP Resource Operations"
         LIST[resources/list]
         READ[resources/read]
         SUB[resources/subscribe]
         NOTIFY[notifications/resources/updated]
     end
-    
+
     subgraph "Event Infrastructure"
         KAFKA[Kafka Event Stream]
         TOPICS[Topics:<br/>twins.member.updated<br/>twins.coverage.changed<br/>twins.task.completed]
     end
-    
+
     subgraph "Digital Session Platform"
         WS[WebSocket Gateway]
         SESSION[Digital Session]
         SDK[Frontend SDKs]
     end
-    
+
     subgraph "Frontend Clients"
         IOS[iOS App]
         WEB[MX App]
         CARE[Care App]
     end
-    
+
     DT --> LIST
     DT --> READ
     DT --> SUB
     DT --> NOTIFY
-    
+
     NOTIFY -->|Publish| KAFKA
     KAFKA --> WS
     WS --> SESSION
@@ -217,15 +217,15 @@ sequenceDiagram
     participant Kafka
     participant WSGateway as WebSocket Gateway
     participant Frontend
-    
+
     Note over CareFlow,Twin: Backend Change
     CareFlow->>Twin: Task completed
     Twin->>Twin: Update resource
-    
+
     Note over Twin,Agent: MCP Notification
     Twin--)Agent: notifications/resources/updated
     Agent->>Twin: resources/read (get updated content)
-    
+
     Note over Twin,Frontend: Event-Driven Push
     Twin->>Kafka: Publish TwinResourceUpdatedEvent
     Kafka->>WSGateway: Consume event
@@ -310,7 +310,7 @@ This example shows how RTE completion flows through the system:
 func (s *RTEService) completeEligibilityCheck(memberID string, result *EligibilityResult) {
     // Update cache
     s.cache.Set(memberID, result)
-    
+
     // Emit event (existing event-driven RTE plan)
     event := &RTECompletedEvent{
         MemberID: memberID,
@@ -329,10 +329,10 @@ func (t *MemberTwin) handleRTECompleted(event *RTECompletedEvent) {
     // Update coverage resource
     coverageURI := fmt.Sprintf("mcp://twins/member/%s/coverage", event.MemberID)
     t.updateResource(coverageURI, event.Eligibility)
-    
+
     // Notify MCP subscribers (agents)
     t.mcp.NotifyResourceUpdated(coverageURI)
-    
+
     // Publish to Kafka for frontends
     twinEvent := &TwinResourceUpdatedEvent{
         ResourceURI: coverageURI,
@@ -352,7 +352,7 @@ func (t *MemberTwin) handleRTECompleted(event *RTECompletedEvent) {
 func (g *Gateway) handleTwinResourceUpdate(event *TwinResourceUpdatedEvent) {
     // Find connected sessions for this member
     connections := g.redis.GetMemberConnections(event.TwinID)
-    
+
     for _, conn := range connections {
         // Push update to frontend
         conn.Send(WebSocketMessage{
@@ -374,7 +374,7 @@ twinClient.on('resource.updated', async (event) => {
   if (event.uri.includes('/coverage')) {
     // Show instant update notification
     showNotification('Coverage information updated!');
-    
+
     // Fetch and display updated coverage
     const coverage = await twinClient.readResource(event.uri);
     setCoverageData(coverage);
@@ -423,27 +423,27 @@ graph TB
     subgraph "Digital Twin Resources"
         RESOURCES[MCP Resources<br/>profile, coverage, care]
     end
-    
+
     subgraph "Digital Session"
         SESSION[Session Context]
         EVENTS[Session Events]
         STATE[Session State]
     end
-    
+
     subgraph "Event Flow"
         KAFKA[Kafka Topics]
         WS[WebSocket Gateway]
     end
-    
+
     subgraph "Frontends"
         CLIENT[Connected Clients]
     end
-    
+
     RESOURCES -->|Updates| SESSION
     SESSION -->|Enriched Events| KAFKA
     KAFKA --> WS
     WS -->|Real-time Push| CLIENT
-    
+
     CLIENT -->|Actions| SESSION
     SESSION -->|Update| RESOURCES
 ```
@@ -457,7 +457,7 @@ message SessionResourceUpdatedEvent {
   string session_id = 1;
   string resource_uri = 2;
   string member_id = 3;
-  
+
   // Context about why resource updated
   oneof trigger {
     string task_completed = 4;
@@ -465,7 +465,7 @@ message SessionResourceUpdatedEvent {
     string form_submitted = 6;
     string chat_action = 7;
   }
-  
+
   // Session-specific metadata
   SessionContext context = 8;
 }
@@ -496,19 +496,19 @@ Event consumers respect these annotations:
 ```go
 func (g *Gateway) filterEventForClient(event *TwinResourceUpdatedEvent, clientRole string) bool {
     resource := g.getResourceMetadata(event.ResourceURI)
-    
+
     // Check audience restrictions
     if !contains(resource.Annotations.Audience, clientRole) {
         return false
     }
-    
+
     // Check privacy restrictions
     if resource.Annotations.Privacy.RequiresConsent {
         if !g.hasConsent(event.TwinID, resource.Annotations.Privacy.PHICategory) {
             return false
         }
     }
-    
+
     return true
 }
 ```
@@ -595,11 +595,11 @@ setInterval(checkCoverage, 5000);  // Wasteful polling
 const initCoverage = async () => {
   // Subscribe to resource
   await twinClient.subscribeToResource(`mcp://twins/member/${memberId}/coverage`);
-  
+
   // Get initial state
   const coverage = await twinClient.readResource(`mcp://twins/member/${memberId}/coverage`);
   setCoverage(coverage);
-  
+
   // Receive push updates
   twinClient.on('resource.updated', (event) => {
     if (event.uri.includes('/coverage')) {

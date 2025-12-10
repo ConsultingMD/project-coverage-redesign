@@ -15,23 +15,23 @@ graph LR
         DECIDE[The Brain<br/>Next Best Actions]
         ACT[CareFlow<br/>Orchestration]
     end
-    
+
     subgraph "Event Infrastructure"
         KAFKA[Kafka Events]
         WS[WebSocket Gateway]
     end
-    
+
     subgraph "Consumers"
         AGENT[AI Agents]
         FRONTEND[Frontends]
     end
-    
+
     SENSE -->|Resource Updates| KAFKA
     DECIDE -->|Recommendations| KAFKA
     ACT -->|Task Updates| KAFKA
-    
+
     KAFKA --> WS
-    
+
     SENSE <-->|MCP Protocol| AGENT
     WS -->|Push Updates| FRONTEND
 ```
@@ -195,6 +195,6 @@ No polling. No timeouts. Instant updates.
 
 ---
 
-**Status**: Ready for Implementation  
-**Estimated Timeline**: 24 weeks  
+**Status**: Ready for Implementation
+**Estimated Timeline**: 24 weeks
 **ROI**: Instant member experiences + AI-native architecture

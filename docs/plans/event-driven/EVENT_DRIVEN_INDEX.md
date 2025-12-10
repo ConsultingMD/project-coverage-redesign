@@ -30,7 +30,7 @@ The Digital Twin MCP pattern is now integrated with the event-driven architectur
 - Implementation of the 2025 Tech Vision "Sense" layer
 - Architecture integration with CareFlow, Brain, ATC, Agent Platform
 
-📄 **MEMBER_TWIN_RESOURCES_CATALOG.md** (720 lines)  
+📄 **MEMBER_TWIN_RESOURCES_CATALOG.md** (720 lines)
 - Complete catalog of MemberTwin MCP resources
 - Resource URIs: profile, coverage, care, clinical, financial
 - Document types and schemas
@@ -304,9 +304,9 @@ EVENT_DRIVEN_RTE_PLAN.md (Phases 1-6)
     ├─ Event consumption in coverage/member-sponsorship
     ├─ Async APIs + Frontend SDKs
     └─ Migration complete
-    
+
          ↓ ENABLES ↓
-         
+
 PROACTIVE CACHE WARMING (Phase 7, Weeks 25-28)
     ├─ Member Cron Service (NEW)
     │  └─ Emits: member-cron-events (scheduled, predictive)
@@ -325,39 +325,39 @@ graph TB
         MC[Member Cron Scheduler]
         ML[ML Model<br/>Predict App Usage]
     end
-    
+
     subgraph "Event Infrastructure (From Phase 1-6)"
         KAFKA[Kafka Event Stream]
         PRODUCER[Event Producer]
     end
-    
+
     subgraph "RTE Cache Warmer (NEW)"
         CONSUMER[Event Consumer]
         FILTER[Filter: p > 0.7]
         BATCH[Submit Batch Jobs]
     end
-    
+
     subgraph "RTE Service"
         STEDI_BATCH[Stedi Batch API]
         CACHE[RTE Cache<br/>Redis + DynamoDB]
     end
-    
+
     subgraph "Member Experience"
         USER[Member Opens App]
         INSTANT[Instant Cache Hit!]
     end
-    
+
     MC -->|Emit events| ML
     ML -->|Enriched event| PRODUCER
     PRODUCER -->|Publish| KAFKA
-    
+
     KAFKA -->|Subscribe| CONSUMER
     CONSUMER -->|Filter| FILTER
     FILTER -->|High probability| BATCH
-    
+
     BATCH -->|Submit| STEDI_BATCH
     STEDI_BATCH -->|Populate| CACHE
-    
+
     USER -->|Check coverage| CACHE
     CACHE -->|Cache hit| INSTANT
 ```
@@ -387,14 +387,14 @@ message MemberCronEvent {
   string account_id = 2;
   string schedule_name = 3;  // "daily-rte-warmup"
   string cron_expression = 4;  // "@daily"
-  
+
   MemberContext context = 5;
 }
 
 message MemberContext {
   string sponsor_id = 1;
   bool has_rte_enabled = 2;
-  
+
   ActivityPrediction predicted_activity = 3;
 }
 
@@ -415,12 +415,12 @@ func (c *CacheWarmerConsumer) HandleMemberCronEvent(ctx context.Context, event *
     if event.Context.PredictedActivity.AppUsageProbability < 0.7 {
         return nil  // Skip low-probability members
     }
-    
+
     // Check if RTE-enabled
     if !event.Context.HasRteEnabled {
         return nil
     }
-    
+
     // Submit batch RTE request (Stedi Batch API)
     return c.rteService.SubmitBatchRequest(ctx, BatchRequest{
         MemberID: event.MemberID,
@@ -440,10 +440,10 @@ SENSE: Digital Twin
     ├─ Engagement Signals (app activity)
     ├─ Member Cron (scheduled, predictive events) ← NEW
     └─ Biometric Data (wearables)
-    
+
 DECIDE: The Brain
     └─ Next Best Actions (PSRs, Goals, Tasks)
-    
+
 ACT: CareFlow + Domain Services
     ├─ CareFlow (orchestration)
     ├─ RTE Cache Warming ← Consumer of Member Cron events
@@ -632,7 +632,7 @@ graph TB
         ANDROID[Android App]
         CARE[Care App]
     end
-    
+
     subgraph "WebSocket Gateway (Self-Hosted)"
         LB[Load Balancer<br/>ALB/NLB]
         WS1[WebSocket Server 1<br/>Go + gorilla/websocket]
@@ -640,12 +640,12 @@ graph TB
         WS3[WebSocket Server N]
         REDIS[Redis<br/>Connection Registry]
     end
-    
+
     subgraph "Event Infrastructure"
         KAFKA[Kafka Event Stream]
         TOPICS[Topics:<br/>rte-completion<br/>call-notifications<br/>session-events]
     end
-    
+
     subgraph "Backend Services"
         AUTH[Authentication Service<br/>JWT validation]
         COV[coverage-server]
@@ -653,26 +653,26 @@ graph TB
         RTE[realtime-eligibility]
         CALLS[Call Service<br/>Urgent Care]
     end
-    
+
     WEB -->|WSS connection| LB
     IOS -->|WSS connection| LB
     ANDROID -->|WSS connection| LB
     CARE -->|WSS connection| LB
-    
+
     LB -->|Route| WS1
     LB -->|Route| WS2
     LB -->|Route| WS3
-    
+
     WS1 <-->|Register connection| REDIS
     WS2 <-->|Register connection| REDIS
     WS3 <-->|Register connection| REDIS
-    
+
     WS1 -->|Subscribe| KAFKA
     WS2 -->|Subscribe| KAFKA
     WS3 -->|Subscribe| KAFKA
-    
+
     KAFKA -->|Produce events| TOPICS
-    
+
     AUTH -->|Validate JWT| WS1
     COV -->|Publish| KAFKA
     MS -->|Publish| KAFKA
@@ -708,7 +708,7 @@ func (g *Gateway) HandleWebSocket(w http.ResponseWriter, r *http.Request) {
     if err != nil {
         return
     }
-    
+
     // 2. Authenticate (JWT from query param or first message)
     token := r.URL.Query().Get("token")
     claims, err := validateJWT(token)
@@ -716,11 +716,11 @@ func (g *Gateway) HandleWebSocket(w http.ResponseWriter, r *http.Request) {
         conn.Close()
         return
     }
-    
+
     // 3. Register connection in Redis
     memberID := claims.MemberID
     g.redis.Set(ctx, fmt.Sprintf("ws:member:%s", memberID), conn.ID, 24*time.Hour)
-    
+
     // 4. Start listening for events and messages
     go g.listenForEvents(conn, memberID)
     go g.listenForClientMessages(conn)
@@ -808,10 +808,10 @@ export class IncludedHealthWebSocket {
   private reconnectAttempts = 0;
   private maxReconnectAttempts = 10;
   private subscriptions: Map<string, EventHandler> = new Map();
-  
+
   async connect(config: WebSocketConfig): Promise<void> {
     this.ws = new WebSocket(`${config.url}?token=${config.auth.token}`);
-    
+
     this.ws.onmessage = (event) => {
       const message = JSON.parse(event.data);
       const handler = this.subscriptions.get(message.type);
@@ -819,24 +819,24 @@ export class IncludedHealthWebSocket {
         handler(message);
       }
     };
-    
+
     this.ws.onclose = () => {
       this.reconnect();
     };
   }
-  
+
   private async reconnect(): Promise<void> {
     if (this.reconnectAttempts >= this.maxReconnectAttempts) {
       throw new Error('Max reconnect attempts reached');
     }
-    
+
     const delay = Math.min(1000 * Math.pow(2, this.reconnectAttempts), 30000);
     await new Promise(resolve => setTimeout(resolve, delay));
-    
+
     this.reconnectAttempts++;
     await this.connect(this.config);
   }
-  
+
   on(eventType: string, handler: EventHandler): void {
     this.subscriptions.set(eventType, handler);
   }
@@ -1073,18 +1073,18 @@ DIGITAL TWIN MCP PATTERN (2025 Tech Vision "Sense" Layer)
     ├─ Three verbs: search, readDocument, chat
     ├─ Resource URIs: mcp://twins/member/{id}/coverage, etc.
     └─ Change notifications: resources/updated events
-    
+
          ↓ EMITS EVENTS VIA ↓
-         
+
 EVENT_DRIVEN_RTE_PLAN.md (Weeks 1-28)
     ├─ Focus: Eliminate RTE timeout failures
     ├─ Infrastructure: Kafka + WebSocket gateway
     ├─ Events: RTE-specific (completion, failure, timeout)
     ├─ 7 Phases: Foundation → Migration → Proactive Cache Warming
     └─ Benefits: No more long-running sync requests
-    
+
          ↓ EXTENDS TO ↓
-         
+
 DIGITAL_SESSION_PLATFORM_PLAN.md (Weeks 5-24, overlaps with RTE phases)
     ├─ Focus: Generic event platform for ALL frontends
     ├─ Infrastructure: Same Kafka + WebSocket (extended)
@@ -1092,15 +1092,15 @@ DIGITAL_SESSION_PLATFORM_PLAN.md (Weeks 5-24, overlaps with RTE phases)
     ├─ Frontend SDKs: Web, iOS, Android, Care app
     ├─ Integration: Digital Twin, CareFlow, The Brain
     └─ Benefits: Real-time member experience across all channels
-    
+
          ↓ ORCHESTRATES ↓
-         
+
 DIGITAL_TWIN_MCP_RESOURCES_INTEGRATION.md (NEW)
     ├─ Connects: MCP Resources ↔ Event-Driven Architecture
     ├─ Flow: Resource change → Kafka event → WebSocket → Frontend
     ├─ Example: RTE completion updates coverage resource
     └─ Result: Real-time push updates for all Digital Twin resources
-    
+
          ↓ ADVANCED FEATURE ↓
 
 PROACTIVE CACHE WARMING (Phase 7, Weeks 25-28)
@@ -1133,19 +1133,19 @@ By building the generic platform, we solve RTE timeouts **and** enable a whole n
 ## Quick Start by Role (Updated)
 
 ### For Executives & Product
-👉 **Read**: 
+👉 **Read**:
 1. `EVENT_DRIVEN_RTE_SUMMARY.md` - Problem and solution overview
 2. `DIGITAL_TWIN_MCP_PATTERN.md` Section 1 - Concept overview and vision
 3. Advanced Feature: Proactive Cache Warming section
 
 ### For Frontend Engineers
-👉 **Read**: 
+👉 **Read**:
 1. `DIGITAL_SESSION_PLATFORM_PLAN.md` Sections 3-4 - SDK APIs & Use Cases
 2. `DIGITAL_TWIN_MCP_RESOURCES_INTEGRATION.md` - Real-time resource updates
 3. `MEMBER_TWIN_RESOURCES_CATALOG.md` - Available resources to consume
 
-### For Backend Engineers  
-👉 **Read**: 
+### For Backend Engineers
+👉 **Read**:
 1. `EVENT_DRIVEN_RTE_PLAN.md` Sections 4-6 - Implementation details
 2. `PROTO_COMMON_INTEGRATION.md` - Event patterns
 3. `DIGITAL_TWIN_MCP_RESOURCES_INTEGRATION.md` - Resource change notifications
@@ -1435,7 +1435,7 @@ By building the generic platform, we solve RTE timeouts **and** enable a whole n
 
 ### Q5: How do we test this in dev environment?
 
-**Answer**: 
+**Answer**:
 - Local: Docker Compose with Kafka + schema registry
 - UAT: Shared Kafka cluster
 - Unit tests: Mock event consumer framework
@@ -1450,7 +1450,7 @@ By building the generic platform, we solve RTE timeouts **and** enable a whole n
 
 ### Q7: How long until users see benefits?
 
-**Answer**: 
+**Answer**:
 - Week 20: Frontend users see real-time updates (WebSocket push)
 - Week 21: Backend services migrated, timeout rate drops
 - Week 24: Polling removed, incident rate drops
@@ -1458,7 +1458,7 @@ By building the generic platform, we solve RTE timeouts **and** enable a whole n
 
 ### Q8: What's the cost?
 
-**Answer**: 
+**Answer**:
 - Infrastructure: $5.5k-8.5k/month (Kafka, WebSocket gateway)
 - Cost offset: $2k/month savings (reduced CPU from polling removal)
 - Net cost: $3.5k-6.5k/month
@@ -1528,7 +1528,7 @@ By building the generic platform, we solve RTE timeouts **and** enable a whole n
 
 ---
 
-**Document Status**: DRAFT  
-**Approval Required**: Yes  
-**Target Start Date**: [To be determined]  
+**Document Status**: DRAFT
+**Approval Required**: Yes
+**Target Start Date**: [To be determined]
 **Estimated Completion**: 7 months from start

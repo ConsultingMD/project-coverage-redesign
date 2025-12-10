@@ -4,13 +4,13 @@
 
 This document describes the implementation plan for **caching CoverageRules and PopulationMembershipRules** in the `customer-configuration` service to address performance issues and reduce database load.
 
-**Problem**: 
+**Problem**:
 - `GetCoverageRules` times out frequently (ACT-1385)
 - `GetPopulationMembershipRules` has peak latency of 4s
 - Customer-configuration has higher traffic than coverage-server
 - Database queries are slow due to large result sets (3,351+ benefit contracts per enrollment channel)
 
-**Solution**: 
+**Solution**:
 - Add cache layer for `CoverageRules` and `PopulationRules` indexed by enrollment channel ID
 - Cache TTL aligned with replicator frequency
 - Graceful degradation on cache misses
@@ -69,18 +69,18 @@ graph TB
         CS[coverage-server]
         MS[member-sponsorship]
     end
-    
+
     subgraph "customer-configuration Service"
         RPC[RPC Handlers<br/>GetCoverageRules<br/>GetPopulationMembershipRules]
         CACHE[Cache Layer<br/>Redis/In-Memory]
         DB[(MySQL Database<br/>Salesforce Replica)]
         REPLICATOR[Replicator<br/>Salesforce Sync]
     end
-    
+
     subgraph "Cache Invalidation"
         INVALIDATE[Invalidation Handler<br/>On Config Updates]
     end
-    
+
     CS -->|RPC Call| RPC
     MS -->|RPC Call| RPC
     RPC -->|Check Cache| CACHE
@@ -90,7 +90,7 @@ graph TB
     CACHE -->|Cached Result| RPC
     REPLICATOR -->|Config Update| INVALIDATE
     INVALIDATE -->|Invalidate Cache| CACHE
-    
+
     style CACHE fill:#e1f5ff
     style DB fill:#ffe1e1
     style INVALIDATE fill:#e1ffe1
@@ -99,25 +99,35 @@ graph TB
 ### Cache Strategy
 
 **Option 1: Redis Cache (Recommended)**
-- **Pros**: 
+- **Pros**:
   - Shared across service instances
   - Persistent across restarts
   - Built-in TTL support
   - High performance
-- **Cons**: 
+- **Cons**:
   - Additional infrastructure dependency
   - Network latency (minimal)
 
 **Option 2: In-Memory Cache**
-- **Pros**: 
+- **Pros**:
   - No external dependencies
   - Lowest latency
-- **Cons**: 
+- **Cons**:
   - Not shared across instances
   - Lost on restart
   - Higher memory usage per instance
 
 **Recommendation**: **Redis Cache** for shared state and persistence, with in-memory fallback for resilience.
+
+**Note**: The `realtime-eligibility` service has similar Redis caching patterns for RPC responses that can be referenced for best practices.
+
+### Serialization Format
+
+**Protobuf Binary Serialization**:
+- Use protobuf binary format (not JSON) for caching gRPC/ConnectRPC responses
+- More efficient in terms of both space and speed compared to JSON
+- Native compatibility with protobuf message types
+- Use `google.golang.org/protobuf/proto` for `Marshal`/`Unmarshal` operations
 
 ### Cache Key Design
 
@@ -143,7 +153,7 @@ population_membership_rules:{population_id}
 - **Configurable**: Via service configuration
 - **Rationale**: Replicator syncs from Salesforce every 5-10 minutes, so 10-minute TTL ensures cache is refreshed after each sync
 
-**Stale-While-Revalidate**: 
+**Stale-While-Revalidate**:
 - Return stale cache while refreshing in background
 - Prevents cache stampede on TTL expiration
 - Improves availability during high load
@@ -167,35 +177,40 @@ population_membership_rules:{population_id}
 ### Phase 1: Cache Infrastructure Setup
 
 **Tasks**:
-1. **Add Redis Client** (if not already present)
-   - Add Redis dependency to `customer-configuration`
+1. **Set Up Redis Infrastructure**
+   - **Note**: Redis infrastructure is not currently available for customer-configuration
+   - Work with platform team to provision Redis cluster
    - Configure Redis connection (host, port, password, pool size)
    - Add health check for Redis connectivity
 
-2. **Create Cache Interface**
-   - Define `Cache` interface with methods:
-     - `Get(ctx context.Context, key string) ([]byte, error)`
-     - `Set(ctx context.Context, key string, value []byte, ttl time.Duration) error`
-     - `Delete(ctx context.Context, key string) error`
-     - `DeletePattern(ctx context.Context, pattern string) error`
+2. **Review and Extend Existing Cache Implementation**
+   - **Existing Files** (already present):
+     - `customer-configuration/app/cache/cache.go` - Cache interface with methods:
+       - `Get(ctx context.Context, key string) ([]byte, error)`
+       - `Set(ctx context.Context, key string, value []byte, ttl time.Duration) error`
+       - `Delete(ctx context.Context, key string) error`
+       - `DeletePattern(ctx context.Context, pattern string) error`
+     - `customer-configuration/app/cache/redis_cache.go` - Redis implementation
+   - **Review existing implementation** to ensure it meets requirements
+   - **Extend if needed**: Add any missing methods or functionality
+   - **Reference**: Review `realtime-eligibility` service for similar Redis caching patterns
 
-3. **Implement Redis Cache**
-   - Implement `Cache` interface using Redis client
-   - Add connection pooling and error handling
-   - Add metrics for cache operations (hits, misses, errors)
-
-4. **Add In-Memory Fallback**
+3. **Add In-Memory Fallback** (if not already present)
    - Implement in-memory cache as fallback when Redis is unavailable
    - Use LRU eviction policy
    - Log when fallback is used
 
-**Files to Create/Modify**:
-- `customer-configuration/app/cache/cache.go` - Cache interface
-- `customer-configuration/app/cache/redis_cache.go` - Redis implementation
-- `customer-configuration/app/cache/memory_cache.go` - In-memory fallback
-- `customer-configuration/app/cache/metrics.go` - Cache metrics
+4. **Add Cache Metrics** (if not already present)
+   - Add metrics for cache operations (hits, misses, errors)
+   - Integrate with existing observability infrastructure
 
-**Estimated Time**: 2-3 days
+**Files to Review/Modify**:
+- `customer-configuration/app/cache/cache.go` - **EXISTS** - Review and extend if needed
+- `customer-configuration/app/cache/redis_cache.go` - **EXISTS** - Review and extend if needed
+- `customer-configuration/app/cache/memory_cache.go` - Create if not present (in-memory fallback)
+- `customer-configuration/app/cache/metrics.go` - Create if not present (cache metrics)
+
+**Estimated Time**: 2-3 days (reduced due to existing infrastructure)
 
 ---
 
@@ -210,8 +225,9 @@ population_membership_rules:{population_id}
      - On hit: return cached result
 
 2. **Serialization**
-   - Serialize `CoverageRules` to JSON for cache storage
-   - Deserialize on cache retrieval
+   - Serialize `CoverageRules` protobuf messages to binary format for cache storage
+   - Deserialize protobuf binary on cache retrieval
+   - **Note**: Use protobuf binary serialization (not JSON) for better performance and compatibility with gRPC/ConnectRPC
    - Handle serialization errors gracefully
 
 3. **Error Handling**
@@ -230,6 +246,10 @@ population_membership_rules:{population_id}
 
 **Code Example**:
 ```go
+import (
+    "google.golang.org/protobuf/proto"
+)
+
 type CachedCoverageRulesService struct {
     cache  cache.Cache
     db     *sql.DB
@@ -245,24 +265,35 @@ func (s *CachedCoverageRulesService) GetCoverageRules(
     cached, err := s.cache.Get(ctx, cacheKey)
     if err == nil && cached != nil {
         var rules model.CoverageRules
-        if err := json.Unmarshal(cached, &rules); err == nil {
+        // Deserialize protobuf binary
+        if err := proto.Unmarshal(cached, &rules); err == nil {
             metrics.CacheHits.Inc()
             return &rules, nil
         }
+        // Log deserialization error but continue to database query
+        s.logger.Warn("Failed to deserialize cached coverage rules",
+            zap.String("enrollment_channel_id", enrollmentChannelID),
+            zap.Error(err),
+        )
     }
-    
+
     // Cache miss - query database
     metrics.CacheMisses.Inc()
     rules, err := s.dbService.GetCoverageRules(ctx, enrollmentChannelID)
     if err != nil {
         return nil, err
     }
-    
-    // Store in cache
-    if data, err := json.Marshal(rules); err == nil {
+
+    // Store in cache (protobuf binary serialization)
+    if data, err := proto.Marshal(rules); err == nil {
         _ = s.cache.Set(ctx, cacheKey, data, 10*time.Minute)
+    } else {
+        s.logger.Warn("Failed to serialize coverage rules for cache",
+            zap.String("enrollment_channel_id", enrollmentChannelID),
+            zap.Error(err),
+        )
     }
-    
+
     return rules, nil
 }
 ```
@@ -279,7 +310,8 @@ func (s *CachedCoverageRulesService) GetCoverageRules(
    - Use population ID or enrollment channel ID as cache key
 
 2. **Serialization and Error Handling**
-   - Same pattern as `GetCoverageRules`
+   - Use protobuf binary serialization (same pattern as `GetCoverageRules`)
+   - Handle serialization errors gracefully
 
 3. **Metrics and Logging**
    - Same pattern as `GetCoverageRules`
@@ -508,8 +540,8 @@ func (r *Replicator) InvalidateCacheOnUpdate(ctx context.Context, tableName stri
 ## Rollout Plan
 
 ### Phase 1: Infrastructure (Week 1)
-- Set up Redis infrastructure
-- Implement cache interface and Redis client
+- Set up Redis infrastructure (provision Redis cluster)
+- Review and extend existing cache interface and Redis client
 - Add configuration and monitoring
 
 ### Phase 2: GetCoverageRules Caching (Week 2)
@@ -539,7 +571,7 @@ func (r *Replicator) InvalidateCacheOnUpdate(ctx context.Context, tableName stri
 ## Dependencies
 
 ### Infrastructure
-- Redis cluster (if not already available)
+- **Redis cluster** - **REQUIRED** - Not currently available, needs to be provisioned (Phase 1)
 - Monitoring and alerting infrastructure
 
 ### Code Dependencies
@@ -555,11 +587,15 @@ func (r *Replicator) InvalidateCacheOnUpdate(ctx context.Context, tableName stri
 
 ## Open Questions
 
-1. **Redis Infrastructure**: Is Redis already available for customer-configuration, or does it need to be set up?
-2. **Cache Key Strategy**: Should we use enrollment channel ID or population ID for population membership rules?
-3. **TTL Configuration**: What is the exact replicator frequency? Should TTL be configurable per environment?
-4. **Invalidation Strategy**: Should we invalidate all cache on any update, or only specific enrollment channels?
-5. **Monitoring**: What existing dashboards/alerts should we integrate with?
+1. **Redis Infrastructure**: ✅ **RESOLVED** - Redis infrastructure is not currently available for customer-configuration and needs to be set up. This is included in Phase 1 of the implementation plan.
+
+2. **Cache Key Strategy**: Should we use enrollment channel ID or population ID for population membership rules? (Decision needed during implementation)
+
+3. **TTL Configuration**: ✅ **RESOLVED** - Replicator frequency is 5-10 minutes. TTL should be configurable per environment (default: 10 minutes).
+
+4. **Invalidation Strategy**: Should we invalidate all cache on any update, or only specific enrollment channels? (Decision needed during implementation - pattern-based invalidation recommended for simplicity)
+
+5. **Monitoring**: What existing dashboards/alerts should we integrate with? (To be determined during Phase 5)
 
 ---
 
@@ -580,10 +616,14 @@ func (r *Replicator) InvalidateCacheOnUpdate(ctx context.Context, tableName stri
 - `customer-configuration/app/service/population/` - Population membership rules service
 - `customer-configuration/app/service/replicator/` - Replicator service
 
-### Proposed New Files
-- `customer-configuration/app/cache/cache.go` - Cache interface
-- `customer-configuration/app/cache/redis_cache.go` - Redis implementation
-- `customer-configuration/app/cache/memory_cache.go` - In-memory fallback
-- `customer-configuration/app/service/coverage/cached_coverage_rules.go` - Cached wrapper
-- `customer-configuration/app/service/population/cached_population_membership_rules.go` - Cached wrapper
-- `customer-configuration/app/service/replicator/invalidation.go` - Cache invalidation
+### Files to Create/Modify
+- `customer-configuration/app/cache/cache.go` - **EXISTS** - Review and extend if needed
+- `customer-configuration/app/cache/redis_cache.go` - **EXISTS** - Review and extend if needed
+- `customer-configuration/app/cache/memory_cache.go` - **NEW** - In-memory fallback (if not present)
+- `customer-configuration/app/cache/metrics.go` - **NEW** - Cache metrics (if not present)
+- `customer-configuration/app/service/coverage/cached_coverage_rules.go` - **NEW** - Cached wrapper
+- `customer-configuration/app/service/population/cached_population_membership_rules.go` - **NEW** - Cached wrapper
+- `customer-configuration/app/service/replicator/invalidation.go` - **NEW** - Cache invalidation
+
+### Reference Implementations
+- `realtime-eligibility` service - Similar Redis caching patterns for RPC responses (reference for best practices)

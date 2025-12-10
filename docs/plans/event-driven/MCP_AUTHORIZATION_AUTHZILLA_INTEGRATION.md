@@ -14,24 +14,24 @@ graph TB
         AGENT[AI Agent]
         APP[Application]
     end
-    
+
     subgraph "MCP Authorization Flow"
         DISCOVER[Discovery]
         OAUTH[OAuth 2.1]
         TOKEN[Access Token]
     end
-    
+
     subgraph "IH Authorization Stack"
         AUTHZILLA[Authzilla<br/>Auth Server]
         AUTH0[Auth0<br/>Identity Provider]
         AUTHZED[Authzed/SpiceDB<br/>Relationship Graph]
     end
-    
+
     subgraph "Digital Twin MCP Servers"
         TWIN[MemberTwin MCP]
         RES[Resources]
     end
-    
+
     AGENT -->|1. Initial Request| TWIN
     TWIN -->|401 + WWW-Authenticate| AGENT
     AGENT -->|2. Discover| DISCOVER
@@ -95,7 +95,7 @@ Authzilla issues JWTs that include both standard OAuth claims and IH-specific re
   "aud": ["mcp://twins/member", "mcp://twins/practitioner"],
   "exp": 1234567890,
   "scope": "read write",
-  
+
   // IH-specific claims for Authzed
   "ih_claims": {
     "actor_type": "care_coordinator",  // or "member", "agent", "service"
@@ -246,13 +246,13 @@ When the Digital Twin MCP server receives a request with a valid OAuth token, it
 func (s *MemberTwinServer) checkAccess(ctx context.Context, token *jwt.Token, resourceURI string) error {
     // Extract claims from JWT
     claims := extractClaims(token)
-    
+
     // Parse resource URI
     // mcp://twins/member/M123/coverage
     parts := parseURI(resourceURI)
     memberID := parts[3]  // M123
     resourceType := parts[4]  // coverage
-    
+
     // Check with Authzed
     resp, err := s.authzedClient.CheckPermission(ctx, &authzed.CheckPermissionRequest{
         Resource: &authzed.ObjectReference{
@@ -267,11 +267,11 @@ func (s *MemberTwinServer) checkAccess(ctx context.Context, token *jwt.Token, re
             },
         },
     })
-    
+
     if resp.Permissionship != authzed.CheckPermissionResponse_PERMISSIONSHIP_HAS_PERMISSION {
         return ErrAccessDenied
     }
-    
+
     return nil
 }
 ```
@@ -285,13 +285,13 @@ definition member {
     relation care_team: care_coordinator | nurse | physician
     relation family: user
     relation sponsor: sponsor
-    
+
     // MCP resource permissions
     permission view_profile = self + care_team + family
     permission view_coverage = self + care_team
     permission view_clinical = self + care_team
     permission view_financial = self + sponsor->billing_admin
-    
+
     // Write permissions more restricted
     permission update_profile = self
     permission create_task = care_team
@@ -305,7 +305,7 @@ definition care_coordinator {
 definition digital_twin_resource {
     relation owner: member
     relation viewers: user | care_coordinator | agent
-    
+
     permission read = owner + viewers
     permission subscribe = owner + viewers  // For MCP subscriptions
 }
@@ -344,7 +344,7 @@ func (g *Gateway) filterEventForClient(event *TwinResourceUpdatedEvent, clientID
         "read",
         fmt.Sprintf("client:%s", clientID),
     )
-    
+
     return allowed == PERMISSIONSHIP_HAS_PERMISSION
 }
 ```
@@ -358,16 +358,16 @@ func (t *MemberTwin) projectResource(resource *Resource, permissions []string) *
         URI: resource.URI,
         Name: resource.Name,
     }
-    
+
     // Only include fields the requester can see
     if contains(permissions, "view_phi") {
         projected.ClinicalData = resource.ClinicalData
     }
-    
+
     if contains(permissions, "view_pii") {
         projected.Demographics = resource.Demographics
     }
-    
+
     return projected
 }
 ```
@@ -383,12 +383,12 @@ Per the MCP spec's emphasis on [RFC 8707](https://www.rfc-editor.org/rfc/rfc8707
 ```go
 func validateTokenAudience(token *jwt.Token, expectedResource string) error {
     audiences := token.Claims["aud"].([]string)
-    
+
     // Must include the specific MCP resource
     if !contains(audiences, expectedResource) {
         return ErrInvalidAudience
     }
-    
+
     return nil
 }
 ```
@@ -420,10 +420,10 @@ class MCPAuthClient {
   async authorize() {
     const verifier = generateCodeVerifier();
     const challenge = await sha256(verifier);
-    
+
     // Store verifier for token exchange
     this.codeVerifier = verifier;
-    
+
     // Include challenge in authorization request
     const authUrl = `${authEndpoint}?` +
       `code_challenge=${challenge}&` +
@@ -521,7 +521,7 @@ class MCPAuthClient {
 9. **Authzed evaluates relationships**:
    - Is agent assigned to member's care team? ✓
    - Does agent have coverage scope? ✓
-   
+
 10. **Digital Twin returns coverage resource**
 
 11. **Agent subscribes to updates**

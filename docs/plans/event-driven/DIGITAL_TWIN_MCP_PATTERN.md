@@ -310,7 +310,7 @@ The digital twin pattern **delegates context management** to the twin instead of
 3. **Context Layers**
    - **Twin Layer:** holds full-fidelity data, historical state, and pre-computed features (e.g., risk scores, open care gaps, program enrollment).
    - **LLM Layer:** sees only the current question, a small working set of summaries, and any documents it explicitly requested.
-   - **UI / Human Layer:** can see both (for debugging / supervision), but the default is: 
+   - **UI / Human Layer:** can see both (for debugging / supervision), but the default is:
      - broader context lives in the twin,
      - focused context lives in the agent’s prompt.
 
@@ -517,4 +517,3 @@ MemberTwin will initially roll out as a **walking skeleton** behind selected Age
 As the service matures, MemberTwin will expand to cover more clinical, behavioral, and financial dimensions of a member’s journey and will be joined by additional twins for practitioners, employees, plans, facilities, and employers.
 
 For more information about MemberTwin and how to participate in the pilot, please reach out to the Engineering Platform and Agent Platform teams or visit the internal Digital Twin MCP documentation hub.
-

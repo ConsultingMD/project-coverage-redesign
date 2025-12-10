@@ -61,24 +61,24 @@ graph TB
         C[Member Cron<br/>Scheduled Events] --> DT
         D[Biometric Data<br/>Wearables] --> DT
     end
-    
+
     subgraph "DECIDE: The Brain"
         DT --> Brain[Recommendation Platform]
         Brain --> NBA[Next Best Actions<br/>PSRs, Goals, Tasks]
     end
-    
+
     subgraph "ACT: Execution Layer"
         NBA --> CareFlow[CareFlow Orchestration]
         NBA --> RTE[RTE Cache Warming]
         NBA --> ATC[Air Traffic Control<br/>Outreach]
     end
-    
+
     CareFlow --> Outcomes[Measured Outcomes<br/>Cost Impact]
     RTE --> Outcomes
     ATC --> Outcomes
-    
+
     Outcomes -.feedback.-> Brain
-    
+
     style C fill:#e1f5ff
     style RTE fill:#e1f5ff
 ```
@@ -108,12 +108,12 @@ message MemberCronEvent {
   // Member identifier
   string member_id = 1;
   string account_id = 2;
-  
+
   // Schedule metadata
   string schedule_name = 3;  // e.g., "daily-rte-warmup"
   string cron_expression = 4;
   google.protobuf.Timestamp emitted_at = 5;
-  
+
   // Member context (for filtering/routing)
   MemberContext context = 6;
 }
@@ -122,14 +122,14 @@ message MemberContext {
   // Sponsorship information
   string sponsor_id = 1;
   repeated string population_ids = 2;
-  
+
   // Feature flags (snapshot at emit time)
   map<string, bool> feature_flags = 3;
-  
+
   // Eligibility metadata
   bool has_rte_enabled = 4;
   google.protobuf.Timestamp last_eligibility_check = 5;
-  
+
   // Activity prediction
   ActivityPrediction predicted_activity = 6;
 }
@@ -137,13 +137,13 @@ message MemberContext {
 message ActivityPrediction {
   // Probability member will use app in next 24h (0.0-1.0)
   float app_usage_probability = 1;
-  
+
   // Predicted RTE operations
   repeated string predicted_operations = 2;  // e.g., ["check_eligibility", "get_coverage"]
-  
+
   // Confidence score (0.0-1.0)
   float confidence = 3;
-  
+
   // Model version used for prediction
   string model_version = 4;
 }
@@ -350,26 +350,26 @@ import "google/protobuf/timestamp.proto";
 message AppSessionEvent {
   // The header of the event
   shared.events.v1.Header header = 1;
-  
+
   // Member account ID
   string account_id = 2;
-  
+
   // Platform (iOS, Android, Web)
   shared.client.v1.ClientPlatformType platform = 3;
-  
+
   // Session event type
   oneof event {
     SessionStarted started = 4;
     SessionEnded ended = 5;
   }
-  
+
   message SessionStarted {
     // Session identifier for correlation
     string session_id = 1;
     // Entry point (push notification, direct launch, deep link)
     string entry_point = 2;
   }
-  
+
   message SessionEnded {
     // Session identifier
     string session_id = 1;
@@ -400,11 +400,11 @@ The member cron includes ML-based prediction for which members are likely to use
 1. **High-confidence prediction** (confidence > 0.8):
    - Warm cache 2-4 hours before predicted usage
    - Use Stedi real-time API for freshness
-   
+
 2. **Medium-confidence prediction** (0.5 < confidence < 0.8):
    - Warm cache 12-24 hours before predicted usage
    - Use Stedi Batch API for efficiency
-   
+
 3. **Low-confidence prediction** (confidence < 0.5):
    - Skip cache warming (wait for reactive caching)
    - Or use batch API during off-peak hours
@@ -420,13 +420,13 @@ schedules:
     filters:
       - has_rte_enabled: true
       - app_usage_probability: "> 0.5"
-    
+
   - name: "weekly-bulk-refresh"
     cron: "0 2 * * 0"  # Sundays at 2 AM
     enabled: true
     filters:
       - has_rte_enabled: true
-    
+
   - name: "monthly-full-sync"
     cron: "@monthly"
     enabled: true
@@ -458,11 +458,11 @@ graph LR
     A[Member Cron Service] --> B[Member Database]
     A --> C[ML Prediction Service]
     A --> D[Kafka: member-cron-events]
-    
+
     D --> E[RTE Cache Warmer]
     D --> F[Batch Job Service]
     D --> G[Other Subscribers]
-    
+
     E --> H[Cache Warming Interface]
     F --> I[Batch RPC Interface]
 ```
@@ -490,16 +490,16 @@ Allow API clients to explicitly request cached data when the cost of stale data 
 enum CacheControl {
   # Default behavior - check cache, fall back to live fetch
   DEFAULT
-  
+
   # Use cache if available, fail fast if not (no live fetch)
   CACHE_ONLY
-  
+
   # Prefer cache even if stale within TTL window
   PREFER_CACHED
-  
+
   # Always bypass cache and fetch live
   BYPASS_CACHE
-  
+
   # Use cache, but trigger async refresh if stale
   STALE_WHILE_REVALIDATE
 }
@@ -526,7 +526,7 @@ enum CacheControl {
 message CheckEligibilityRequest {
   string member_id = 1;
   // ... other fields
-  
+
   CacheControl cache_control = 10;
 }
 ```
@@ -596,7 +596,7 @@ enum CacheStatus {
 ```graphql
 type Coverage {
   # ... coverage fields
-  
+
   _metadata: CacheMetadata
 }
 
@@ -635,15 +635,15 @@ func (s *RTEService) CheckEligibility(ctx context.Context, req *pb.CheckEligibil
     if req.CacheControl == pb.CacheControl_STALE_WHILE_REVALIDATE {
         // Return cached data immediately
         cached, _ := s.cache.Get(ctx, cacheKey)
-        
+
         // Trigger async refresh if stale
         if cached.IsStale() {
             go s.refreshCacheAsync(context.Background(), req)
         }
-        
+
         return cached.ToResponse(), nil
     }
-    
+
     // ... other cache control logic
 }
 ```
@@ -702,13 +702,13 @@ Provide a durable, optimized RPC interface for submitting batch member jobs with
 service BatchEligibilityService {
   // Submit a batch job for processing
   rpc SubmitBatch(SubmitBatchRequest) returns (SubmitBatchResponse);
-  
+
   // Get status of a batch job
   rpc GetBatchStatus(GetBatchStatusRequest) returns (GetBatchStatusResponse);
-  
+
   // List batches for a client service
   rpc ListBatches(ListBatchesRequest) returns (ListBatchesResponse);
-  
+
   // Cancel a running batch
   rpc CancelBatch(CancelBatchRequest) returns (CancelBatchResponse);
 }
@@ -717,16 +717,16 @@ message SubmitBatchRequest {
   // Batch metadata
   string client_service_name = 1;  // e.g., "medication-service"
   string client_job_id = 2;        // Client's tracking ID
-  
+
   // Member selection
   oneof member_selector {
     MemberIdList member_ids = 3;
     MemberQuery member_query = 4;
   }
-  
+
   // Execution options
   BatchExecutionOptions options = 5;
-  
+
   // Cache behavior
   CacheControl cache_control = 6;
 }
@@ -739,117 +739,117 @@ message MemberQuery {
   // ========================================
   // Sponsorship & Population Filters
   // ========================================
-  
+
   // Filter by sponsor (customer) IDs
   repeated string sponsor_ids = 1;
-  
+
   // Filter by population IDs (benefit populations)
   repeated string population_ids = 2;
-  
+
   // ========================================
   // Benefit Contract & Healthcare Service Filters
   // ========================================
-  
+
   // Filter by healthcare service availability through benefit contracts
   // Examples: "VPC", "BH_THERAPY", "CHRONIC_CARE_MANAGEMENT", "PHARMACY"
   BenefitContractFilter benefit_contract_filter = 3;
-  
+
   // ========================================
   // Feature Options & Configuration
   // ========================================
-  
+
   // Filter by feature options (customer-specific configuration)
   // Example: "provider_instructions" = "enabled", "chat_available" = "true"
   repeated FeatureOptionFilter feature_options = 4;
-  
+
   // Feature flag filters (LaunchDarkly)
   map<string, bool> required_feature_flags = 5;
-  
+
   // ========================================
   // Predicate Filters
   // ========================================
-  
+
   // Filter by benefit contract predicate evaluation
   // Predicates gate access to services based on eligibility fields
   PredicateFilter predicate_filter = 6;
-  
+
   // ========================================
   // Coverage & Insurance Filters
   // ========================================
-  
+
   // RTE eligibility filters
   bool has_rte_enabled = 7;
   google.protobuf.Timestamp eligibility_checked_after = 8;
   google.protobuf.Timestamp eligibility_checked_before = 9;
-  
+
   // Dual coverage / Coordination of Benefits (COB) filter
   CoverageFilter coverage_filter = 10;
-  
+
   // Insurance plan filters (health plans, policies)
   InsurancePlanFilter insurance_plan_filter = 11;
-  
+
   // ========================================
   // Family & Relationship Filters
   // ========================================
-  
+
   // Filter by family structure and relationships
   FamilyRelationshipFilter family_filter = 12;
-  
+
   // ========================================
   // Account Demographics Filters
   // ========================================
-  
+
   // Filter by demographic attributes
   DemographicsFilter demographics_filter = 13;
-  
+
   // ========================================
   // Activity & Engagement Filters
   // ========================================
-  
+
   // Last activity timestamp filters
   google.protobuf.Timestamp last_active_after = 14;
   google.protobuf.Timestamp last_active_before = 15;
-  
+
   // ML-predicted app usage probability threshold (0.0-1.0)
   float min_app_usage_probability = 16;
-  
+
   // Engagement cohort filters
   EngagementFilter engagement_filter = 17;
-  
+
   // ========================================
   // Care Journey & Clinical Filters
   // ========================================
-  
+
   // Filter by active care programs and clinical state
   CareJourneyFilter care_journey_filter = 18;
-  
+
   // ========================================
   // Event Activity Filters
   // ========================================
-  
+
   // Filter by recent event activity
   RecentEventFilter recent_event_filter = 19;
-  
+
   // ========================================
   // Operational Filters
   // ========================================
-  
+
   // Account status filters
   repeated AccountStatus account_statuses = 20;
-  
+
   // Exclude test/mock accounts
   bool exclude_mock_accounts = 21;
-  
+
   // ========================================
   // Pagination & Sorting
   // ========================================
-  
+
   // Maximum results to return
   int32 limit = 22;
-  
+
   // Pagination cursor
   string cursor = 23;
-  
+
   // Sort order
   SortOrder sort_order = 24;
 }
@@ -859,16 +859,16 @@ message BenefitContractFilter {
   // Healthcare service IDs member must have access to
   // Examples: "VPC", "BH_THERAPY", "CCM", "PHARMACY", "LAB_SERVICES"
   repeated string healthcare_service_ids = 1;
-  
+
   // Insurance plan IDs (for insurance plan-based benefits)
   repeated string insurance_plan_ids = 2;
-  
+
   // Benefit contract must be active within this timespan
   google.protobuf.Timestamp active_at = 3;
-  
+
   // Include future benefit contracts (not yet active)
   bool include_future_contracts = 4;
-  
+
   // Filter by top benefits (featured in benefits directory)
   optional bool is_top_benefit = 5;
 }
@@ -877,7 +877,7 @@ message BenefitContractFilter {
 message FeatureOptionFilter {
   // Feature option name (e.g., "provider_instructions", "chat_available")
   string name = 1;
-  
+
   // Feature option type
   enum FeatureOptionType {
     TYPE_UNSPECIFIED = 0;
@@ -887,10 +887,10 @@ message FeatureOptionFilter {
     JSON = 4;
   }
   FeatureOptionType type = 2;
-  
+
   // Expected value (string representation)
   string value = 3;
-  
+
   // Operator for comparison
   enum Operator {
     OPERATOR_UNSPECIFIED = 0;
@@ -908,16 +908,16 @@ message PredicateFilter {
   // Predicate expression to evaluate
   // Example: "AGE >= 18 AND STATE = 'CA'"
   string expression = 1;
-  
+
   // Evaluate predicates for specific benefit contract
   optional string benefit_contract_id = 2;
-  
+
   // Evaluate predicates for healthcare service
   optional string healthcare_service_id = 3;
-  
+
   // Only include members where ALL predicates evaluate to true
   bool require_all_predicates = 4;
-  
+
   // Evaluation timestamp (defaults to current time)
   optional google.protobuf.Timestamp evaluated_at = 5;
 }
@@ -926,7 +926,7 @@ message PredicateFilter {
 message CoverageFilter {
   // Member has dual coverage (coordination of benefits)
   optional bool has_dual_coverage = 1;
-  
+
   // Primary vs secondary coverage
   enum CoverageType {
     COVERAGE_TYPE_UNSPECIFIED = 0;
@@ -934,13 +934,13 @@ message CoverageFilter {
     SECONDARY = 2;
   }
   repeated CoverageType coverage_types = 2;
-  
+
   // Filter by insurance carrier/payer
   repeated string payer_names = 3;
-  
+
   // Member is using file-based enrollment (vs RTE)
   optional bool is_file_based_enrollment = 4;
-  
+
   // Coverage status
   enum CoverageStatus {
     COVERAGE_STATUS_UNSPECIFIED = 0;
@@ -950,7 +950,7 @@ message CoverageFilter {
     INACTIVE = 4;
   }
   repeated CoverageStatus coverage_statuses = 5;
-  
+
   // Coverage period contains this timestamp
   optional google.protobuf.Timestamp coverage_active_at = 6;
 }
@@ -959,10 +959,10 @@ message CoverageFilter {
 message InsurancePlanFilter {
   // Specific insurance plan IDs
   repeated string insurance_plan_ids = 1;
-  
+
   // Insurance carrier/payer name
   repeated string payer_names = 2;  // "Aetna", "Blue Cross Blue Shield", "UnitedHealthcare"
-  
+
   // Plan type
   enum PlanType {
     PLAN_TYPE_UNSPECIFIED = 0;
@@ -977,7 +977,7 @@ message InsurancePlanFilter {
     DUAL_ELIGIBLE = 9;          // Medicare + Medicaid
   }
   repeated PlanType plan_types = 3;
-  
+
   // Network type
   enum NetworkType {
     NETWORK_TYPE_UNSPECIFIED = 0;
@@ -986,49 +986,49 @@ message InsurancePlanFilter {
     REFERENCE_BASED_PRICING = 3;
   }
   repeated NetworkType network_types = 4;
-  
+
   // Plan characteristics
   optional bool is_self_funded = 5;        // Self-funded vs fully-insured
   optional bool has_hsa = 6;               // Health Savings Account eligible
   optional bool has_hra = 7;               // Health Reimbursement Account
   optional bool has_fsa = 8;               // Flexible Spending Account
-  
+
   // Benefit features
   optional bool has_mental_health_coverage = 9;
   optional bool has_prescription_coverage = 10;
   optional bool has_dental_coverage = 11;
   optional bool has_vision_coverage = 12;
   optional bool has_telehealth_coverage = 13;
-  
+
   // Deductible ranges (annual)
   optional float min_individual_deductible = 14;
   optional float max_individual_deductible = 15;
   optional float min_family_deductible = 16;
   optional float max_family_deductible = 17;
-  
+
   // Out-of-pocket maximum ranges
   optional float min_individual_oop_max = 18;
   optional float max_individual_oop_max = 19;
-  
+
   // Plan group/policy identifiers
   repeated string group_numbers = 20;
   repeated string policy_numbers = 21;
-  
+
   // Employer/sponsor association
   repeated string employer_ids = 22;
-  
+
   // Plan effective dates
   optional google.protobuf.Timestamp plan_effective_after = 23;
   optional google.protobuf.Timestamp plan_effective_before = 24;
-  
+
   // Plan renewal/anniversary timing
   optional bool renewing_within_days = 25;
   optional int32 days_until_renewal = 26;
-  
+
   // Marketplace plans
   optional bool is_marketplace_plan = 27;
   optional bool is_subsidized = 28;
-  
+
   // Metal tiers (ACA marketplace)
   enum MetalTier {
     METAL_TIER_UNSPECIFIED = 0;
@@ -1051,13 +1051,13 @@ message FamilyRelationshipFilter {
     BOTH = 3;              // Both subscriber and beneficiary (dual roles)
   }
   repeated MemberRole member_roles = 1;
-  
+
   // Has dependents (children, spouse) covered under their policy
   optional bool has_dependents = 2;
-  
+
   // Is a dependent of another member
   optional bool is_dependent = 3;
-  
+
   // Relationship to subscriber (for dependents)
   enum Relationship {
     RELATIONSHIP_UNSPECIFIED = 0;
@@ -1067,11 +1067,11 @@ message FamilyRelationshipFilter {
     OTHER_DEPENDENT = 4;
   }
   repeated Relationship relationships = 4;
-  
+
   // Family size (number of covered members)
   optional int32 min_family_size = 5;
   optional int32 max_family_size = 6;
-  
+
   // Has specific family members also using IH
   optional bool has_family_members_enrolled = 7;
 }
@@ -1081,7 +1081,7 @@ message DemographicsFilter {
   // Age range
   optional int32 min_age = 1;
   optional int32 max_age = 2;
-  
+
   // Specific age groups
   enum AgeGroup {
     AGE_GROUP_UNSPECIFIED = 0;
@@ -1092,25 +1092,25 @@ message DemographicsFilter {
     MEDICARE_AGE = 5;      // 65+
   }
   repeated AgeGroup age_groups = 3;
-  
+
   // Gender (sex assigned at birth)
   repeated string biological_sexes = 4;  // "MALE", "FEMALE", "INTERSEX", "UNKNOWN"
-  
+
   // Gender identity (self-identified)
   repeated string gender_identities = 5;
-  
+
   // Geographic filters
   repeated string states = 6;           // US state codes: "CA", "TX", "NY"
   repeated string zip_codes = 7;        // ZIP code prefixes: "94", "100"
   repeated string cities = 8;
-  
+
   // Language preferences
   repeated string preferred_spoken_languages = 9;   // "en", "es", "zh"
   repeated string preferred_written_languages = 10;
-  
+
   // Race/ethnicity (self-reported)
   repeated string race_ethnicities = 11;
-  
+
   // Member flags
   optional bool is_vip = 12;
   optional bool is_do_not_contact = 13;
@@ -1130,24 +1130,24 @@ message EngagementFilter {
     AT_RISK_CHURN = 6;       // Declining engagement pattern
   }
   repeated EngagementCohort cohorts = 1;
-  
+
   // Has logged in within timeframe
   optional google.protobuf.Timestamp logged_in_after = 2;
   optional google.protobuf.Timestamp logged_in_before = 3;
-  
+
   // Has completed onboarding
   optional bool has_completed_onboarding = 4;
-  
+
   // Has interacted with specific features
   repeated string used_features = 5;  // "messaging", "appointments", "benefits_lookup"
-  
+
   // Has appointments scheduled
   optional bool has_upcoming_appointments = 6;
-  
+
   // Message activity
   optional bool has_unread_messages = 7;
   optional bool has_sent_messages = 8;
-  
+
   // Notification preferences
   optional bool push_notifications_enabled = 9;
   optional bool email_notifications_enabled = 10;
@@ -1165,29 +1165,29 @@ message CareJourneyFilter {
     PHARMACY_SUPPORT = 5;
   }
   repeated ProgramType enrolled_programs = 1;
-  
+
   // Has active service deliveries
   optional bool has_active_service_deliveries = 2;
-  
+
   // Service delivery types
   repeated string service_delivery_types = 3;  // "EMO", "VPC_VISIT", "LABS"
-  
+
   // Has open care gaps
   optional bool has_open_care_gaps = 4;
-  
+
   // Specific care gap types
   repeated string care_gap_types = 5;  // "HEDIS_COLORECTAL_SCREENING", "A1C_MANAGEMENT"
-  
+
   // Has active prescriptions
   optional bool has_active_prescriptions = 6;
-  
+
   // Chronic conditions
   repeated string chronic_conditions = 7;  // "DIABETES", "HYPERTENSION", "ASTHMA"
-  
+
   // Recent claims activity
   optional bool has_recent_claims = 8;
   google.protobuf.Timestamp claims_after = 9;
-  
+
   // High utilizer (frequent service usage)
   optional bool is_high_utilizer = 10;
 }
@@ -1213,62 +1213,62 @@ message RecentEventFilter {
     COMMUNICATIONS = 14;        // Push notifications, emails, SMS
   }
   repeated EventCategory event_categories = 1;
-  
+
   // Specific event types (proto fully qualified names)
   repeated string event_types = 2;  // e.g., "domain.authentication.v1.SIGNIN"
-  
+
   // Timeframe filters
   google.protobuf.Timestamp events_after = 3;   // Events occurred after this timestamp
   google.protobuf.Timestamp events_before = 4;  // Events occurred before this timestamp
-  
+
   // Event frequency filters
   optional int32 min_event_count = 5;  // Minimum number of events in timeframe
   optional int32 max_event_count = 6;  // Maximum number of events in timeframe
-  
+
   // Event recency
   optional google.protobuf.Duration within_last = 7;  // Events within last N duration (e.g., "24h", "7d")
-  
+
   // Source service filters
   repeated string source_services = 8;  // e.g., "mx-backend", "scheduling", "coverage-server"
-  
+
   // Authentication-specific filters
   optional bool has_signed_in_recently = 9;
   optional bool has_session_active = 10;
-  
+
   // Enrollment-specific filters
   optional bool has_enrolled_recently = 11;
   optional bool has_coverage_change = 12;
-  
+
   // Engagement-specific filters
   optional bool has_app_session = 13;
   optional bool has_viewed_homepage = 14;
   optional bool has_used_feature = 15;
   repeated string feature_names = 16;  // Specific features used
-  
+
   // Messaging-specific filters
   optional bool has_sent_message = 17;
   optional bool has_received_message = 18;
   optional bool has_opened_notification = 19;
-  
+
   // Appointment-specific filters
   optional bool has_booked_appointment = 20;
   optional bool has_cancelled_appointment = 21;
   optional bool has_searched_provider = 22;
-  
+
   // Care program-specific filters
   optional bool has_program_enrollment = 23;
   optional bool has_service_delivery = 24;
   optional bool has_care_gap_activity = 25;
-  
+
   // Clinical event-specific filters
   optional bool has_lab_result = 26;
   optional bool has_prescription_filled = 27;
   optional bool has_claim_processed = 28;
-  
+
   // RTE-specific filters
   optional bool has_eligibility_check = 29;
   optional bool had_eligibility_error = 30;
-  
+
   // Event pattern detection
   optional bool is_increasing_activity = 31;    // Event frequency trending up
   optional bool is_decreasing_activity = 32;    // Event frequency trending down
@@ -1296,7 +1296,7 @@ message SortOrder {
     FAMILY_NAME = 5;
   }
   Field field = 1;
-  
+
   enum Direction {
     DIRECTION_UNSPECIFIED = 0;
     ASCENDING = 1;
@@ -1755,7 +1755,7 @@ graph TB
     subgraph "MemberQuery Filter Space"
         MQ[MemberQuery API]
     end
-    
+
     subgraph "Customer & Coverage Domains"
         style "Customer & Coverage Domains" fill:#e1f5ff
         BC[BenefitContractFilter]
@@ -1765,7 +1765,7 @@ graph TB
         COV[CoverageFilter]
         SP[SponsorFilter]
         POP[PopulationFilter]
-        
+
         BC -->|Healthcare Services<br/>Insurance Plans<br/>Active Contracts| CoverageDomain[Coverage Domain<br/>coverage-server]
         IP -->|Plan Types<br/>Payers<br/>Benefits<br/>Deductibles<br/>Networks| CoverageDomain
         FO -->|Customer Configs<br/>Feature Flags| CustomerConfig[Customer Config<br/>customer-configuration]
@@ -1774,55 +1774,55 @@ graph TB
         SP -->|Sponsor IDs| Sponsorship[Member Sponsorship<br/>member-sponsorship]
         POP -->|Population Groups| Sponsorship
     end
-    
+
     subgraph "Accounts & Identity Domains"
         style "Accounts & Identity Domains" fill:#fff4e6
         DEM[DemographicsFilter]
         ACCT[AccountStatus]
         FAM[FamilyRelationshipFilter]
-        
+
         DEM -->|Age, Gender<br/>Location<br/>Language<br/>Race/Ethnicity| AccountsDomain[Accounts Domain<br/>accounts service]
         ACCT -->|Active/Suspended<br/>VIP/DNC flags| AccountsDomain
         FAM -->|Subscriber/Dependent<br/>Family Size<br/>Relationships| AccountsDomain
     end
-    
+
     subgraph "Member Experience & Engagement Domains"
         style "Member Experience & Engagement Domains" fill:#f3e5f5
         ENG[EngagementFilter]
-        
+
         ENG -->|App Usage<br/>Login Activity<br/>Cohorts<br/>Onboarding| MXDomain[Member Experience<br/>mx-backend]
         ENG -->|Messages<br/>Notifications| MessagingDomain[Messaging<br/>messaging service]
         ENG -->|Upcoming Appts| SchedulingDomain[Scheduling<br/>scheduling service]
     end
-    
+
     subgraph "Clinical & Care Domains"
         style "Clinical & Care Domains" fill:#e8f5e9
         CJ[CareJourneyFilter]
-        
+
         CJ -->|Programs<br/>Service Deliveries| LongitudinalCare[Longitudinal Care<br/>care services]
         CJ -->|Care Gaps<br/>Chronic Conditions| CareGaps[Care Gaps<br/>care-gap service]
         CJ -->|Active Prescriptions| PharmacyDomain[Pharmacy<br/>pharmacy service]
         CJ -->|Recent Claims<br/>High Utilization| ClaimsDomain[Claims<br/>claims service]
     end
-    
+
     subgraph "Event Stream & Activity Domains"
         style "Event Stream & Activity Domains" fill:#fff9c4
         REF[RecentEventFilter]
-        
+
         REF -->|Authentication Events<br/>Enrollment Events<br/>Engagement Events| KafkaAuth[Kafka Topics<br/>domain.authentication<br/>domain.enrollment<br/>domain.engagement]
         REF -->|Care Events<br/>Clinical Events<br/>Messaging Events| KafkaCare[Kafka Topics<br/>domain.care<br/>domain.clinical<br/>domain.messaging]
         REF -->|RTE Events<br/>Appointment Events<br/>Payment Events| KafkaOther[Kafka Topics<br/>domain.rte<br/>domain.scheduling<br/>domain.payments]
     end
-    
+
     subgraph "ML & Prediction Domains"
         style "ML & Prediction Domains" fill:#fce4ec
         PRED[min_app_usage_probability]
         SCHED[scheduling_window<br/>OPTIMAL_MEMBER_ENGAGEMENT]
-        
+
         PRED -->|ML Predictions| DigitalTwin[Digital Twin<br/>Predictive Models]
         SCHED -->|ATC Predictions| ATC[Air Traffic Control<br/>Engagement Prediction]
     end
-    
+
     MQ --> BC
     MQ --> IP
     MQ --> FO
@@ -1838,10 +1838,10 @@ graph TB
     MQ --> REF
     MQ --> PRED
     MQ --> SCHED
-    
+
     classDef queryNode fill:#4a90e2,stroke:#2e5c8a,color:#fff
     classDef domainNode fill:#7cb342,stroke:#558b2f,color:#fff
-    
+
     class MQ queryNode
     class CoverageDomain,CustomerConfig,RTEService,Sponsorship,AccountsDomain,MXDomain,MessagingDomain,SchedulingDomain,LongitudinalCare,CareGaps,PharmacyDomain,ClaimsDomain,KafkaAuth,KafkaCare,KafkaOther,DigitalTwin,ATC domainNode
 ```
@@ -1873,37 +1873,37 @@ When processing a `MemberQuery`, the batch service must:
 1. **Start with Core Identity** (Accounts Domain)
    - Account status filter (active/suspended)
    - Demographics (age, location, language)
-   
+
 2. **Apply Enrollment Filters** (Sponsorship Domain)
    - Sponsor IDs → Population membership
    - Population filters
-   
+
 3. **Apply Coverage Filters** (Coverage Domain)
    - Benefit contracts → Healthcare service access
    - Insurance plans → Plan types, payers, benefits
    - Feature options → Customer-specific configs
    - Predicates → Eligibility rules
-   
+
 4. **Apply RTE Filters** (RTE Service)
    - Coverage status (dual coverage, COB)
    - Eligibility freshness
-   
+
 5. **Apply Engagement Filters** (Member Experience)
    - App usage, login activity
    - Cohorts, onboarding status
    - Messages, notifications, appointments
-   
+
 6. **Apply Care Journey Filters** (Clinical Domains)
    - Program enrollment, service deliveries
    - Care gaps, chronic conditions
    - Prescriptions, claims
-   
+
 7. **Apply Recent Event Filters** (Cross-Domain Event Stream)
    - Event categories (authentication, enrollment, engagement, etc.)
    - Event recency and frequency
    - Event patterns (increasing/decreasing activity)
    - Specific event types from Kafka topics
-   
+
 8. **Apply ML Predictions** (Digital Twin)
    - App usage probability
    - Optimal engagement timing (ATC)
@@ -1950,7 +1950,7 @@ message RiskStratificationFilter {
   // Predicted risk scores from ML models
   optional float min_health_risk_score = 1;  // 0.0-1.0
   optional float min_churn_risk_score = 2;
-  
+
   // Clinical complexity
   optional int32 min_chronic_conditions = 3;
   optional int32 min_annual_er_visits = 4;
@@ -1964,10 +1964,10 @@ message BiometricFilter {
   // Connected devices
   optional bool has_wearable_connected = 1;
   repeated string device_types = 2;  // "apple_watch", "fitbit", "continuous_glucose_monitor"
-  
+
   // Recent biometric data
   optional google.protobuf.Timestamp biometric_data_after = 3;
-  
+
   // Health metrics availability
   optional bool has_step_data = 4;
   optional bool has_heart_rate_data = 5;
@@ -1980,16 +1980,16 @@ message BiometricFilter {
 message SDOHFilter {
   // Transportation barriers
   optional bool has_transportation_barrier = 1;
-  
+
   // Food insecurity
   optional bool has_food_insecurity = 2;
-  
+
   // Housing stability
   optional bool has_housing_instability = 3;
-  
+
   // Digital literacy
   optional bool requires_digital_assistance = 4;
-  
+
   // SDOH screening completed
   optional bool has_sdoh_screening = 5;
 }
@@ -2000,13 +2000,13 @@ message SDOHFilter {
 message ProviderNetworkFilter {
   // Has attributed primary care provider
   optional bool has_pcp_attributed = 1;
-  
+
   // Provider network
   repeated string network_ids = 2;
-  
+
   // Recent provider interaction
   optional google.protobuf.Timestamp seen_provider_after = 3;
-  
+
   // Provider type
   repeated string provider_types = 4;  // "PCP", "SPECIALIST", "BH_THERAPIST"
 }
@@ -2018,14 +2018,14 @@ message TemporalEventFilter {
   // Life events
   optional bool has_recent_life_event = 1;
   repeated string life_event_types = 2;  // "BIRTH", "MARRIAGE", "JOB_CHANGE"
-  
+
   // Open enrollment windows
   optional bool in_open_enrollment_period = 3;
-  
+
   // Coverage transitions
   optional bool coverage_expiring_within_days = 4;
   int32 days_until_expiration = 5;
-  
+
   // Anniversaries
   optional bool enrollment_anniversary_within_days = 6;
 }
@@ -2039,7 +2039,7 @@ message BatchExecutionOptions {
     PRIORITY_HIGH = 2;     // Use real-time API with rate limiting
   }
   Priority priority = 1;
-  
+
   // Execution strategy
   enum Strategy {
     STRATEGY_OPTIMAL = 0;        // Service decides (batch vs real-time)
@@ -2047,19 +2047,19 @@ message BatchExecutionOptions {
     STRATEGY_REALTIME_ONLY = 2;  // Use real-time API with scheduling
   }
   Strategy strategy = 2;
-  
+
   // Scheduling window for batch execution
   SchedulingWindow scheduling_window = 3;
-  
+
   // Rate limiting (for real-time strategy)
   int32 max_concurrent_requests = 4;
-  
+
   // Timeout
   google.protobuf.Duration timeout = 5;  // Default: 8 hours
-  
+
   // Retry configuration
   RetryConfig retry_config = 6;
-  
+
   // Callback for progress updates
   string callback_url = 7;
 }
@@ -2068,19 +2068,19 @@ message BatchExecutionOptions {
 enum SchedulingWindow {
   // Let service choose optimal time based on system load
   SCHEDULING_WINDOW_ANY = 0;
-  
+
   // 9 AM - 5 PM local time (when support staff available)
   SCHEDULING_WINDOW_BUSINESS_HOURS = 1;
-  
+
   // 6 AM - 10 AM local time (pre-work engagement)
   SCHEDULING_WINDOW_MORNING = 2;
-  
+
   // 5 PM - 10 PM local time (post-work engagement)
   SCHEDULING_WINDOW_EVENING = 3;
-  
+
   // Off-peak hours when Stedi load is lowest (typically 1 AM - 5 AM)
   SCHEDULING_WINDOW_LOW_UTILIZATION = 4;
-  
+
   // ML-predicted optimal engagement time per member (via ATC)
   SCHEDULING_WINDOW_OPTIMAL_MEMBER_ENGAGEMENT = 5;
 }
@@ -2125,11 +2125,11 @@ message BatchProgress {
   int32 completed = 2;
   int32 failed = 3;
   int32 pending = 4;
-  
+
   // Cache statistics
   int32 cache_hits = 5;
   int32 cache_misses = 6;
-  
+
   // Processing statistics
   google.protobuf.Duration avg_duration = 7;
   google.protobuf.Timestamp started_at = 8;
@@ -2158,7 +2158,7 @@ Service automatically distributes load based on current system utilization:
 func (s *BatchService) scheduleAny(ctx context.Context, batch *Batch) time.Time {
     // Check current Stedi load
     currentLoad := s.metrics.GetCurrentStediLoad()
-    
+
     if currentLoad < 0.3 {
         // Low load, start immediately
         return time.Now()
@@ -2184,17 +2184,17 @@ Executes during business hours when support staff are available to handle issues
 ```go
 func (s *BatchService) scheduleBusinessHours(ctx context.Context, batch *Batch) time.Time {
     now := time.Now()
-    
+
     // Determine member's timezone (from account or default to customer)
     tz := s.getMemberTimezone(batch.Members)
     localNow := now.In(tz)
-    
+
     // If already in business hours, schedule soon
     if localNow.Hour() >= 9 && localNow.Hour() < 17 {
         // Spread across next 2 hours to avoid spikes
         return now.Add(time.Duration(rand.Intn(120)) * time.Minute)
     }
-    
+
     // Otherwise schedule for 9 AM next business day
     nextBusinessDay := s.nextBusinessDay(localNow)
     return time.Date(
@@ -2222,7 +2222,7 @@ func (s *BatchService) scheduleMorning(ctx context.Context, batch *Batch) time.T
     // Target 6-7 AM for cache warming (1-2h before peak usage)
     tz := s.getMemberTimezone(batch.Members)
     tomorrow := time.Now().In(tz).AddDate(0, 0, 1)
-    
+
     return time.Date(
         tomorrow.Year(), tomorrow.Month(), tomorrow.Day(),
         6, rand.Intn(60), 0, 0, tz,
@@ -2248,7 +2248,7 @@ Post-work engagement window when members review health information:
 func (s *BatchService) scheduleEvening(ctx context.Context, batch *Batch) time.Time {
     tz := s.getMemberTimezone(batch.Members)
     today := time.Now().In(tz)
-    
+
     // If before 5 PM, schedule for this evening
     if today.Hour() < 17 {
         return time.Date(
@@ -2256,7 +2256,7 @@ func (s *BatchService) scheduleEvening(ctx context.Context, batch *Batch) time.T
             17, rand.Intn(60), 0, 0, tz,
         )
     }
-    
+
     // Otherwise tomorrow evening
     tomorrow := today.AddDate(0, 0, 1)
     return time.Date(
@@ -2284,7 +2284,7 @@ Off-peak hours with minimal user traffic and lowest Stedi load:
 func (s *BatchService) scheduleLowUtilization(ctx context.Context, batch *Batch) time.Time {
     tz := s.getMemberTimezone(batch.Members)
     tomorrow := time.Now().In(tz).AddDate(0, 0, 1)
-    
+
     // Schedule between 2-4 AM (deepest off-peak)
     return time.Date(
         tomorrow.Year(), tomorrow.Month(), tomorrow.Day(),
@@ -2318,7 +2318,7 @@ Uses **Air Traffic Control (ATC)** to predict optimal contact time per member ba
 func (s *BatchService) scheduleOptimalEngagement(ctx context.Context, batch *Batch) map[string]time.Time {
     // Query ATC for each member's optimal engagement window
     engagementTimes := make(map[string]time.Time)
-    
+
     for _, memberID := range batch.Members {
         // Call Air Traffic Control prediction service
         atcResp, err := s.atcClient.PredictOptimalTime(ctx, &atc.PredictRequest{
@@ -2328,18 +2328,18 @@ func (s *BatchService) scheduleOptimalEngagement(ctx context.Context, batch *Bat
             Priority:    "low",
             LookaheadH: 24,
         })
-        
+
         if err != nil {
             // Fallback to morning window
             engagementTimes[memberID] = s.scheduleMorning(ctx, &Batch{Members: []string{memberID}})
             continue
         }
-        
+
         // Schedule cache warming 1-2 hours BEFORE predicted engagement
         warmingTime := atcResp.OptimalTime.Add(-time.Duration(rand.Intn(60)+60) * time.Minute)
         engagementTimes[memberID] = warmingTime
     }
-    
+
     return engagementTimes
 }
 ```
@@ -2364,23 +2364,23 @@ def predict_optimal_engagement_time(member_context):
     # Factor 1: Historical app usage peaks
     usage_histogram = member_context.app_usage_by_hour  # [0-23] hour bins
     peak_hours = top_3_hours(usage_histogram)
-    
+
     # Factor 2: Recent activity (strong signal)
     if member_context.last_login < 10_minutes_ago:
         return "now + 2 hours"  # They're active, likely to return
-    
+
     # Factor 3: Appointment-driven
     if member_context.has_appointment_within_24h:
         return appointment_time - 1_hour  # Pre-warm before visit
-    
+
     # Factor 4: Day of week patterns
     if today.weekday() == member_context.preferred_weekday:
         return today + preferred_hour
-    
+
     # Factor 5: Journey-based
     if member_context.in_active_care_journey:
         return tomorrow + 8am  # Morning check-in pattern
-    
+
     # Default: use peak usage hour
     return tomorrow + peak_hours[0]
 ```
@@ -2438,7 +2438,7 @@ for i, member := range batch.Members {
     // Spread evenly: member i schedules at 6:00 + (i / total) * 120 min
     offset := (i * 120) / len(batch.Members)
     memberTime := baseTime.Add(time.Duration(offset) * time.Minute)
-    
+
     // Add small jitter (±5 min) to avoid exact collisions
     finalTime := s.applyJitter(memberTime, 10)
     s.scheduleMember(member, finalTime)
@@ -2451,7 +2451,7 @@ for i, member := range batch.Members {
 func (s *BatchService) adaptiveBatchRate(ctx context.Context) int {
     // Check current Stedi concurrency
     usedSlots := s.metrics.StediConcurrentRequests()
-    
+
     if usedSlots < 5 {
         // Low load: allow 5 req/sec for batch
         return 5
@@ -2471,16 +2471,16 @@ func (s *BatchService) adaptiveBatchRate(ctx context.Context) int {
 // For very large batches (>50k members), spread across multiple windows
 func (s *BatchService) distributeAcrossWindows(batch *Batch) []ScheduledBatch {
     batches := []ScheduledBatch{}
-    
+
     // Split into 10k-member chunks
     chunks := chunkMembers(batch.Members, 10000)
-    
+
     windows := []SchedulingWindow{
         SCHEDULING_WINDOW_LOW_UTILIZATION,  // 1-5 AM: 10k members
         SCHEDULING_WINDOW_MORNING,          // 6-10 AM: 10k members
         SCHEDULING_WINDOW_EVENING,          // 5-10 PM: 10k members
     }
-    
+
     for i, chunk := range chunks {
         window := windows[i%len(windows)]
         batches = append(batches, ScheduledBatch{
@@ -2489,7 +2489,7 @@ func (s *BatchService) distributeAcrossWindows(batch *Batch) []ScheduledBatch {
             StartTime: s.scheduleForWindow(window),
         })
     }
-    
+
     return batches
 }
 ```
@@ -2520,7 +2520,7 @@ batch_execution_hour_of_day_total{hour="06"} 52
 batch_execution_hour_of_day_total{hour="02"} 143
 
 # Load spreading effectiveness
-stedi_concurrency_during_batch{window="morning",slots_used="8"} 
+stedi_concurrency_during_batch{window="morning",slots_used="8"}
 stedi_concurrency_during_batch{window="low_utilization",slots_used="14"}
 
 # ATC prediction accuracy (for optimal engagement)
@@ -2584,12 +2584,12 @@ func (s *BatchService) ResolveMemberQuery(ctx context.Context, query *pb.MemberQ
         Limit:            query.Limit,
         Cursor:           query.Cursor,
     })
-    
+
     // Filter by feature flags (LaunchDarkly)
     if len(query.RequiredFeatureFlags) > 0 {
         members = s.filterByFeatureFlags(ctx, members, query.RequiredFeatureFlags)
     }
-    
+
     return extractMemberIDs(members), nil
 }
 ```
@@ -2603,11 +2603,11 @@ func BatchEligibilityWorkflow(ctx workflow.Context, req *pb.SubmitBatchRequest) 
     // Resolve member query to IDs
     var memberIDs []string
     err := workflow.ExecuteActivity(ctx, ResolveMemberQueryActivity, req).Get(ctx, &memberIDs)
-    
+
     // Decide execution strategy
     var strategy ExecutionStrategy
     err = workflow.ExecuteActivity(ctx, DecideStrategyActivity, req, len(memberIDs)).Get(ctx, &strategy)
-    
+
     if strategy == StrategyBatchAPI {
         // Use Stedi Batch API
         return executeBatchAPIWorkflow(ctx, memberIDs, req.Options)
@@ -2620,20 +2620,20 @@ func BatchEligibilityWorkflow(ctx workflow.Context, req *pb.SubmitBatchRequest) 
 func executeBatchAPIWorkflow(ctx workflow.Context, memberIDs []string, opts *pb.BatchExecutionOptions) error {
     // Split into 10k-member batches
     batches := chunkMembers(memberIDs, 10000)
-    
+
     for _, batch := range batches {
         // Submit to Stedi Batch API
         var batchID string
         err := workflow.ExecuteActivity(ctx, SubmitStediBatchActivity, batch).Get(ctx, &batchID)
-        
+
         // Poll for results with exponential backoff
         var results *StediBatchResults
         err = workflow.ExecuteActivity(ctx, PollStediBatchActivity, batchID).Get(ctx, &results)
-        
+
         // Process results and update cache
         err = workflow.ExecuteActivity(ctx, ProcessBatchResultsActivity, results).Get(ctx, nil)
     }
-    
+
     return nil
 }
 
@@ -2643,7 +2643,7 @@ func executeRealtimeWorkflow(ctx workflow.Context, memberIDs []string, opts *pb.
         // Execute RTE check via scheduler
         err := workflow.ExecuteChildWorkflow(ctx, RTECheckWorkflow, memberID).Get(ctx, nil)
     }
-    
+
     return nil
 }
 ```
@@ -2661,12 +2661,12 @@ The batch service optimizes cache access:
 func (s *BatchService) OptimizeBatch(ctx context.Context, memberIDs []string, cacheControl pb.CacheControl) ([]string, error) {
     // Bulk cache lookup
     cached, err := s.cache.GetMany(ctx, memberIDs)
-    
+
     if cacheControl == pb.CacheControl_CACHE_ONLY {
         // Return only cached results, don't fetch missing
         return nil, nil
     }
-    
+
     // Filter to members needing refresh
     needsRefresh := []string{}
     for _, memberID := range memberIDs {
@@ -2674,7 +2674,7 @@ func (s *BatchService) OptimizeBatch(ctx context.Context, memberIDs []string, ca
             needsRefresh = append(needsRefresh, memberID)
         }
     }
-    
+
     return needsRefresh, nil
 }
 ```
@@ -2688,31 +2688,31 @@ client := batch.NewBatchEligibilityClient(conn)
 resp, err := client.SubmitBatch(ctx, &batch.SubmitBatchRequest{
     ClientServiceName: "medication-service",
     ClientJobId:       "nightly-eligibility-refresh-2024-11-13",
-    
+
     MemberSelector: &batch.SubmitBatchRequest_MemberQuery{
         MemberQuery: &batch.MemberQuery{
             // All members with RTE enabled
             HasRteEnabled: true,
-            
+
             // Who haven't been checked in last 12 hours
             EligibilityCheckedBefore: timestamppb.New(time.Now().Add(-12 * time.Hour)),
-            
+
             // With feature flag enabled
             RequiredFeatureFlags: map[string]bool{
                 "medication-eligibility-check": true,
             },
         },
     },
-    
+
     Options: &batch.BatchExecutionOptions{
         Priority: batch.BatchExecutionOptions_PRIORITY_LOW,
         Strategy: batch.BatchExecutionOptions_STRATEGY_OPTIMAL,
         Timeout:  durationpb.New(8 * time.Hour),
-        
+
         // Get notified on progress
         CallbackUrl: "https://medication-service/api/batch-callback",
     },
-    
+
     // Prefer cached data (only refresh stale)
     CacheControl: pb.CacheControl_PREFER_CACHED,
 })
@@ -2723,9 +2723,9 @@ for range ticker.C {
     status, _ := client.GetBatchStatus(ctx, &batch.GetBatchStatusRequest{
         BatchId: resp.BatchId,
     })
-    
+
     if status.Status == batch.BatchStatus_COMPLETED {
-        log.Printf("Batch completed: %d/%d successful", 
+        log.Printf("Batch completed: %d/%d successful",
             status.Progress.Completed, status.Progress.TotalMembers)
         break
     }
@@ -2764,18 +2764,18 @@ message BatchJobEvent {
   string event_id = 1;
   google.protobuf.Timestamp occurred_at = 2;
   string event_type = 3;  // "STARTED", "PROGRESS", "COMPLETED", "FAILED"
-  
+
   // Batch job context
   string batch_id = 4;
   string job_type = 5;  // "CACHE_WARMING", "MEMBER_QUERY", "RTE_BATCH"
-  
+
   // Job details
   BatchJobDetails details = 6;
-  
+
   // Initiator context
   string initiated_by_service = 7;
   string initiated_by_user_id = 8;
-  
+
   // Results (for COMPLETED/FAILED events)
   oneof result {
     BatchCompletedResult completed = 9;
@@ -2789,15 +2789,15 @@ message BatchCompletedResult {
   int32 successful = 2;
   int32 failed = 3;
   int32 skipped = 4;
-  
+
   // Cache statistics
   int32 cache_hits = 5;
   int32 cache_refreshed = 6;
-  
+
   // Timing
   google.protobuf.Duration total_duration = 7;
   google.protobuf.Duration avg_member_duration = 8;
-  
+
   // Resource usage
   int32 stedi_batch_calls = 9;
   int32 stedi_realtime_calls = 10;
@@ -2830,7 +2830,7 @@ for event := range consumer.Messages() {
         log.Error("failed to unmarshal event", zap.Error(err))
         continue
     }
-    
+
     switch batchEvent.EventType {
     case "COMPLETED":
         handleBatchCompleted(batchEvent)
@@ -2877,14 +2877,14 @@ for event := range consumer.Messages() {
 service BatchCacheWarmingService {
   // Streaming response: server sends progress updates as they occur
   rpc SubmitBatchStreaming(SubmitBatchRequest) returns (stream BatchStatusUpdate);
-  
+
   // Subscribe to batch job updates by batch_id
   rpc WatchBatchStatus(WatchBatchRequest) returns (stream BatchStatusUpdate);
 }
 
 message WatchBatchRequest {
   string batch_id = 1;
-  
+
   // Filter which events to receive
   repeated BatchEventType event_types = 2;  // Empty = all events
 }
@@ -2900,7 +2900,7 @@ enum BatchEventType {
 message BatchStatusUpdate {
   google.protobuf.Timestamp timestamp = 1;
   BatchEventType event_type = 2;
-  
+
   oneof update {
     BatchStarted started = 3;
     BatchProgress progress = 4;
@@ -2926,30 +2926,30 @@ func (s *batchServer) WatchBatchStatus(
 ) error {
     ctx := stream.Context()
     batchID := req.Msg.BatchId
-    
+
     // Subscribe to batch updates (from Temporal workflow signals or state store)
     updateCh, errCh := s.batchService.SubscribeToBatchUpdates(ctx, batchID)
-    
+
     // Keepalive ticker (prevent ALB timeout)
     keepaliveTicker := time.NewTicker(30 * time.Second)
     defer keepaliveTicker.Stop()
-    
+
     for {
         select {
         case update := <-updateCh:
             if err := stream.Send(update); err != nil {
                 return err
             }
-            
+
             // Close stream after completion/failure
-            if update.EventType == rtev1.EVENT_TYPE_COMPLETED || 
+            if update.EventType == rtev1.EVENT_TYPE_COMPLETED ||
                update.EventType == rtev1.EVENT_TYPE_FAILED {
                 return nil
             }
-            
+
         case err := <-errCh:
             return err
-            
+
         case <-keepaliveTicker.C:
             // Send empty progress update as keepalive ping
             if err := stream.Send(&rtev1.BatchStatusUpdate{
@@ -2958,7 +2958,7 @@ func (s *batchServer) WatchBatchStatus(
             }); err != nil {
                 return err
             }
-            
+
         case <-ctx.Done():
             return ctx.Err()
         }
@@ -2987,10 +2987,10 @@ if err != nil {
 
 for stream.Receive() {
     update := stream.Msg()
-    log.Info("batch update", 
+    log.Info("batch update",
         zap.String("event_type", update.EventType.String()),
         zap.Time("timestamp", update.Timestamp.AsTime()))
-    
+
     switch update.GetUpdate().(type) {
     case *rtev1.BatchStatusUpdate_Completed:
         log.Info("batch completed!")
@@ -3063,25 +3063,25 @@ func (s *batchService) notifyCallback(ctx context.Context, event *BatchJobEvent)
     if event.CallbackURL == "" {
         return nil  // No callback configured
     }
-    
+
     payload, err := json.Marshal(event)
     if err != nil {
         return err
     }
-    
+
     req, err := http.NewRequestWithContext(ctx, "POST", event.CallbackURL, bytes.NewReader(payload))
     if err != nil {
         return err
     }
-    
+
     req.Header.Set("Content-Type", "application/json")
     req.Header.Set("X-Batch-Event-Type", event.EventType)
     req.Header.Set("X-Batch-Job-ID", event.BatchID)
-    
+
     // Add HMAC signature for webhook verification (based on Notifications Service pattern)
     sig := generateHMAC(payload, s.webhookSecret)
     req.Header.Set("X-Webhook-Signature", sig)
-    
+
     // Retry with exponential backoff
     return retry.Do(ctx, retry.WithMaxAttempts(3), func(ctx context.Context) error {
         resp, err := s.httpClient.Do(req)
@@ -3089,7 +3089,7 @@ func (s *batchService) notifyCallback(ctx context.Context, event *BatchJobEvent)
             return err
         }
         defer resp.Body.Close()
-        
+
         if resp.StatusCode >= 200 && resp.StatusCode < 300 {
             return nil
         }
@@ -3106,16 +3106,16 @@ func (h *callbackHandler) HandleBatchCallback(w http.ResponseWriter, r *http.Req
         http.Error(w, "invalid signature", http.StatusUnauthorized)
         return
     }
-    
+
     var event BatchJobEvent
     if err := json.NewDecoder(r.Body).Decode(&event); err != nil {
         http.Error(w, "invalid payload", http.StatusBadRequest)
         return
     }
-    
+
     // Process event asynchronously (respond quickly to avoid timeouts)
     h.eventQueue.Enqueue(event)
-    
+
     w.WriteHeader(http.StatusOK)
     json.NewEncoder(w).Write(map[string]string{"status": "received"})
 }
@@ -3166,26 +3166,26 @@ type BatchEvent struct {
 
 func (w *BatchMonitorWorkflow) Execute(ctx workflow.Context, input BatchMonitorInput) error {
     events := []BatchEvent{}
-    
+
     // Set up signal handler
     signalChan := workflow.GetSignalChannel(ctx, "batch-event")
-    
+
     var batchComplete bool
     for !batchComplete {
         var event BatchEvent
         signalChan.Receive(ctx, &event)
         events = append(events, event)
-        
+
         // Optionally notify via webhook/kafka
         if input.CallbackConfig.Enabled {
             workflow.ExecuteActivity(ctx, NotifyCallbackActivity, event).Get(ctx, nil)
         }
-        
+
         if event.EventType == "COMPLETED" || event.EventType == "FAILED" {
             batchComplete = true
         }
     }
-    
+
     return nil
 }
 
@@ -3280,7 +3280,7 @@ Implement **Kafka as the primary event bus** (Option 1) and support **optional c
 ```protobuf
 message BatchExecutionOptions {
   // ... existing fields ...
-  
+
   // Push notification preferences
   NotificationPreferences notifications = 10;
 }
@@ -3288,13 +3288,13 @@ message BatchExecutionOptions {
 message NotificationPreferences {
   // Kafka topic to publish events (defaults to domain.rte.v1.batch_job_events)
   optional string kafka_topic = 1;
-  
+
   // HTTP webhook URL for callbacks (optional, for backward compat)
   optional string callback_url = 2;
-  
+
   // Filter which event types to send
   repeated string event_types = 3;  // ["STARTED", "COMPLETED", "FAILED"]
-  
+
   // Delivery guarantees
   enum DeliveryMode {
     DELIVERY_BEST_EFFORT = 0;    // No retries (fast, may lose events)
@@ -3353,10 +3353,10 @@ Proactive interface for warming RTE caches based on predicted member activity or
 service CacheWarmingService {
   // Warm cache for specific members
   rpc WarmCache(WarmCacheRequest) returns (WarmCacheResponse);
-  
+
   // Schedule recurring cache warming
   rpc ScheduleWarming(ScheduleWarmingRequest) returns (ScheduleWarmingResponse);
-  
+
   // Get warming statistics
   rpc GetWarmingStats(GetWarmingStatsRequest) returns (GetWarmingStatsResponse);
 }
@@ -3364,13 +3364,13 @@ service CacheWarmingService {
 message WarmCacheRequest {
   // Members to warm
   repeated string member_ids = 1;
-  
+
   // Operations to warm (empty = all)
   repeated string operations = 2;  // e.g., ["check_eligibility", "get_benefits"]
-  
+
   // Warming strategy
   WarmingStrategy strategy = 3;
-  
+
   // Priority (affects scheduling)
   enum Priority {
     PRIORITY_BACKGROUND = 0;  // Use batch API, very low priority
@@ -3378,7 +3378,7 @@ message WarmCacheRequest {
     PRIORITY_URGENT = 2;      // Use real-time API
   }
   Priority priority = 4;
-  
+
   // Source/reason for tracking
   string source = 5;  // e.g., "member-cron", "manual-trigger", "appointment-scheduled"
 }
@@ -3400,14 +3400,14 @@ message ScheduleWarmingRequest {
   // Schedule configuration
   string schedule_name = 1;
   string cron_expression = 2;
-  
+
   // Member selection
   MemberQuery member_query = 3;  // Reuse from Batch RPC
-  
+
   // Warming options
   WarmingStrategy strategy = 4;
   WarmCacheRequest.Priority priority = 5;
-  
+
   // Enable/disable
   bool enabled = 6;
 }
@@ -3430,16 +3430,16 @@ message GetWarmingStatsResponse {
 message WarmingStats {
   int32 total_members_warmed = 1;
   int32 cache_hits_avoided = 2;  // Members that would have been cache miss
-  
+
   // By source
   map<string, int32> by_source = 3;
-  
+
   // Accuracy of predictions
   float prediction_accuracy = 4;  // % of warmed caches that were used
-  
+
   // Performance
   google.protobuf.Duration avg_warm_duration = 5;
-  
+
   // Cache effectiveness
   float cache_hit_rate_improvement = 6;  // Before vs after warming
 }
@@ -3455,7 +3455,7 @@ func (s *CacheWarmingService) handleMemberCronEvent(ctx context.Context, event *
     if event.Context.PredictedActivity.AppUsageProbability < 0.7 {
         return nil  // Skip low-probability members
     }
-    
+
     // Warm cache based on predicted operations
     req := &pb.WarmCacheRequest{
         MemberIds:  []string{event.MemberId},
@@ -3464,14 +3464,14 @@ func (s *CacheWarmingService) handleMemberCronEvent(ctx context.Context, event *
         Priority:   s.determinePriority(event),
         Source:     "member-cron-" + event.ScheduleName,
     }
-    
+
     _, err := s.WarmCache(ctx, req)
     return err
 }
 
 func (s *CacheWarmingService) determinePriority(event *cron.MemberCronEvent) pb.WarmCacheRequest_Priority {
     prob := event.Context.PredictedActivity.AppUsageProbability
-    
+
     if prob > 0.9 {
         return pb.WarmCacheRequest_PRIORITY_URGENT
     } else if prob > 0.7 {
@@ -3494,12 +3494,12 @@ func (s *CacheWarmingService) intelligentWarm(ctx context.Context, memberID stri
         // Cache is fresh, skip
         return nil
     }
-    
+
     if err == nil && cached.IsStale() {
         // Cache exists but stale - use batch API
         return s.warmViaBatchAPI(ctx, memberID)
     }
-    
+
     // Cache miss - use real-time API if urgent, batch API otherwise
     return s.warmViaRealtime(ctx, memberID)
 }
@@ -3516,7 +3516,7 @@ func (s *CacheWarmingService) forceWarm(ctx context.Context, memberID string) er
         MemberId:     memberID,
         CacheControl: pb.CacheControl_BYPASS_CACHE,
     })
-    
+
     // Cache will be updated by RTE service
     return err
 }
@@ -3534,7 +3534,7 @@ func (s *CacheWarmingService) fillOnly(ctx context.Context, memberID string) err
         // Cache exists (even if stale), skip
         return nil
     }
-    
+
     // Cache miss - warm it
     return s.warmViaBatchAPI(ctx, memberID)
 }
@@ -3605,14 +3605,14 @@ sequenceDiagram
     participant Batch as Batch RPC
     participant WDRR as WDRR Scheduler
     participant Stedi as Stedi API
-    
+
     Note over Cron: Daily @ 4 AM
     Cron->>Kafka: Emit member-cron-events
     Note over Kafka: For all members with<br/>app_usage_probability > 0.7
-    
+
     Kafka->>Warmer: Consume events
     Warmer->>Warmer: Check prediction confidence
-    
+
     alt High confidence (>0.9)
         Warmer->>WDRR: Enqueue real-time check
         WDRR->>Stedi: Real-time API call
@@ -3620,10 +3620,10 @@ sequenceDiagram
         Warmer->>Batch: Submit batch warming job
         Batch->>Stedi: Batch API (up to 10k members)
     end
-    
+
     Stedi-->>Batch: Results after 15-30 min
     Batch->>Batch: Update cache
-    
+
     Note over Cron,Batch: 6-9 AM: User activity peak
     Note over Warmer: Cache hit rate: 92%<br/>(vs 65% without warming)
 ```
@@ -3638,14 +3638,14 @@ func (s *MedicationService) handleMemberCron(ctx context.Context, event *cron.Me
     if !hasPending {
         return nil
     }
-    
+
     // Submit batch job to refresh eligibility for all pending prescription members
     batchClient := batch.NewBatchEligibilityClient(s.rteConn)
-    
+
     resp, err := batchClient.SubmitBatch(ctx, &batch.SubmitBatchRequest{
         ClientServiceName: "medication-service",
         ClientJobId:       fmt.Sprintf("daily-eligibility-%s", time.Now().Format("2006-01-02")),
-        
+
         MemberSelector: &batch.SubmitBatchRequest_MemberQuery{
             MemberQuery: &batch.MemberQuery{
                 HasRteEnabled:            true,
@@ -3655,15 +3655,15 @@ func (s *MedicationService) handleMemberCron(ctx context.Context, event *cron.Me
                 },
             },
         },
-        
+
         Options: &batch.BatchExecutionOptions{
             Priority: batch.BatchExecutionOptions_PRIORITY_NORMAL,
             Strategy: batch.BatchExecutionOptions_STRATEGY_OPTIMAL,
         },
-        
+
         CacheControl: pb.CacheControl_PREFER_CACHED,
     })
-    
+
     return err
 }
 ```
@@ -3743,13 +3743,13 @@ panels:
     queries:
       - rate(rte_cache_hit_total{warmed="true"}[5m])
       - rate(rte_cache_hit_total{warmed="false"}[5m])
-  
+
   - title: "Prediction Accuracy"
     query: rte_cache_warming_prediction_accuracy
-  
+
   - title: "Warming Jobs by Priority"
     query: sum by (priority) (rate(rte_cache_warming_requests_total[5m]))
-  
+
   - title: "Stedi API Reduction"
     queries:
       - rate(stedi_requests_total[5m]) # With warming
@@ -3762,13 +3762,13 @@ panels:
 panels:
   - title: "Active Batch Jobs"
     query: rte_batch_jobs_active
-  
+
   - title: "Batch Completion Time"
     query: histogram_quantile(0.95, rte_batch_duration_seconds_bucket)
-  
+
   - title: "Batch Cache Hit Rate"
     query: rate(rte_batch_cache_hits_total[5m]) / rate(rte_batch_requests_total[5m])
-  
+
   - title: "Batch vs Real-time Traffic"
     queries:
       - rate(rte_requests_total{source="batch"}[5m])
@@ -3783,12 +3783,12 @@ alerts:
     condition: rte_cache_warming_prediction_accuracy < 0.7
     severity: warning
     description: "Prediction model accuracy dropped below 70%"
-  
+
   - name: "Batch job stuck"
     condition: rte_batch_job_duration_seconds > 28800  # 8 hours
     severity: critical
     description: "Batch job exceeded 8-hour timeout"
-  
+
   - name: "Cache warming not reducing Stedi load"
     condition: |
       (rate(stedi_requests_total[1h]) -
@@ -3808,7 +3808,7 @@ alerts:
 - **Cache hit rate**: 65%
 - **Morning rush**: 500 cache misses × $0.10 = $50
 
-**Total monthly** (assuming 30 batch jobs + daily rushes): 
+**Total monthly** (assuming 30 batch jobs + daily rushes):
 - Batch: 30 × $100 = $3,000
 - Rush: 30 × $50 = $1,500
 - **Total: $4,500/month**

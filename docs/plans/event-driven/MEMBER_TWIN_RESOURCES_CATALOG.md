@@ -8,19 +8,19 @@
 
 Before listing specific resources, a few principles:
 
-1. **Member-centric, not system-centric**  
+1. **Member-centric, not system-centric**
    Resources are organized around how a human would think about a member (identity, coverage, care, money, communication), not around individual services (CareFlow, claims, EHR connectors).
 
-2. **Views, not raw tables**  
+2. **Views, not raw tables**
    Each document type is a *view* tuned for a use case (guide, clinician, member self-service, agent) and prompt-friendly, rather than a direct mirror of an underlying schema.
 
-3. **Stable resource URIs + typed payloads**  
+3. **Stable resource URIs + typed payloads**
    Every resource has a stable MCP URI (e.g., `mcp://twins/member/{id}/careflow/{service_delivery_id}`) and resolves to a Schema Registry-backed type.
 
-4. **Privacy-first**  
+4. **Privacy-first**
    All documents include field-level annotations for PHI/PII categories and purpose-of-use so MemberTwin can enforce minimum-necessary sharing per tool and caller.
 
-5. **Incremental slices**  
+5. **Incremental slices**
    We start with a narrow but high-value slice (identity, open actions, key benefits, recent care) and expand over time.
 
 ---
@@ -29,7 +29,7 @@ Before listing specific resources, a few principles:
 
 At a high level, MemberTwin could expose a resource tree like this:
 
-- `mcp://twins/member/{member_id}`  
+- `mcp://twins/member/{member_id}`
   Root handle for the member twin.
   - `/profile` – canonical member identity & enrollment profile.
   - `/coverage` – current and upcoming coverage & benefits.
@@ -57,12 +57,12 @@ At a high level, MemberTwin could expose a resource tree like this:
 
 ### 3.1 Member Profile
 
-**Resource**  
+**Resource**
 - `mcp://twins/member/{member_id}/profile`
 
 **Document Types**
 
-- `MemberTwinProfile`  
+- `MemberTwinProfile`
   High-level identity & enrollment snapshot:
   - Demographics (name, DOB, gender, address, contact; PHI-tagged).
   - Primary coverage (plan, group, effective dates).
@@ -70,7 +70,7 @@ At a high level, MemberTwin could expose a resource tree like this:
   - Program enrollments (e.g., BH program, chronic care, maternity support).
   - High-level flags (e.g., high-utilizer, complex needs, language preference).
 
-- `MemberTwinSummary`  
+- `MemberTwinSummary`
   Prompt-ready summary:
   - 3–7 bullet “story so far” about the member.
   - Top conditions, top active programs.
@@ -82,12 +82,12 @@ At a high level, MemberTwin could expose a resource tree like this:
 
 ### 4.1 Coverage Overview
 
-**Resource**  
+**Resource**
 - `mcp://twins/member/{member_id}/coverage`
 
 **Document Types**
 
-- `CoverageOverviewSummary`  
+- `CoverageOverviewSummary`
   - Primary plan name, group, network.
   - Effective and termination dates.
   - High-level deductible / OOP scoreboard.
@@ -112,7 +112,7 @@ At a high level, MemberTwin could expose a resource tree like this:
   - Common limitations (e.g., “X visits per year”, “prior auth required”).
   - Links/refs to full plan docs in `/attachments`.
 
-- `BenefitNetworkSummary`  
+- `BenefitNetworkSummary`
   - In-network vs out-of-network rules.
   - PCP selection requirements.
 
@@ -122,18 +122,18 @@ At a high level, MemberTwin could expose a resource tree like this:
 
 ### 5.1 Care Summary & Open Actions
 
-**Resource**  
+**Resource**
 - `mcp://twins/member/{member_id}/care/summary`
 
 **Document Types**
 
-- `CareSnapshot`  
+- `CareSnapshot`
   - Top conditions + associated plans/programs.
   - Active care plans and key milestones.
   - Open actions (tasks to member, tasks to care team).
   - Recently completed actions and outcomes (high level).
 
-- `OpenActionsList`  
+- `OpenActionsList`
   - Flattened list of open actions:
     - Human-readable label.
     - Owner (member vs care team vs external partner).
@@ -148,13 +148,13 @@ At a high level, MemberTwin could expose a resource tree like this:
 
 **Document Types**
 
-- `CarePlanSummary`  
+- `CarePlanSummary`
   - Plan name, goals, owner (IPU/program).
   - Start/end dates.
   - Key goals and metrics.
   - High-level structure of tasks and milestones.
 
-- `CarePlanDetail`  
+- `CarePlanDetail`
   - More detailed step-level or phase-level view.
   - Mapping to CareFlow service deliveries/tasks.
 
@@ -167,12 +167,12 @@ At a high level, MemberTwin could expose a resource tree like this:
 
 **Document Types**
 
-- `CareFlowTaskSummary`  
+- `CareFlowTaskSummary`
   - Task description, status, due date.
   - Assigned party (member, clinician, care team).
   - Linked plan/goal.
 
-- `ServiceDeliverySummary`  
+- `ServiceDeliverySummary`
   - Encounter-like view for CareFlow service deliveries.
   - Actions taken, outcomes, next steps.
 
@@ -184,7 +184,7 @@ At a high level, MemberTwin could expose a resource tree like this:
 
 **Document Types**
 
-- `ProgramEnrollmentSummary`  
+- `ProgramEnrollmentSummary`
   - Program (IPU) name, type, and focus (e.g., BH, chronic care, maternity).
   - Enrollment status and dates.
   - Key contacts (coach, clinician).
@@ -204,7 +204,7 @@ At a high level, MemberTwin could expose a resource tree like this:
 
 **Document Types**
 
-- `ClinicalSnapshot`  
+- `ClinicalSnapshot`
   - Top N active conditions.
   - Major procedures/surgeries.
   - Key meds and allergies.
@@ -218,7 +218,7 @@ At a high level, MemberTwin could expose a resource tree like this:
 
 **Document Types**
 
-- `ConditionSummary`  
+- `ConditionSummary`
   - Condition name, code (ICD/SNOMED where available).
   - Onset, status (active/resolved), severity.
   - Key related encounters or plans.
@@ -231,7 +231,7 @@ At a high level, MemberTwin could expose a resource tree like this:
 
 **Document Types**
 
-- `MedicationSummary`  
+- `MedicationSummary`
   - Drug name, class, route, dose, frequency.
   - Status (active/discontinued).
   - Prescriber and last refill.
@@ -245,7 +245,7 @@ At a high level, MemberTwin could expose a resource tree like this:
 
 **Document Types**
 
-- `LabResultSummary`  
+- `LabResultSummary`
   - Test name, date, ordering provider.
   - Result values (highlighting abnormal values only for prompt views).
   - Interpretation or flags.
@@ -258,7 +258,7 @@ At a high level, MemberTwin could expose a resource tree like this:
 
 **Document Types**
 
-- `EncounterSummary`  
+- `EncounterSummary`
   - Type (ER visit, primary care, IH virtual visit, BH therapy, etc.).
   - Date/time, location (physical or virtual).
   - High-level reason for visit.
@@ -279,13 +279,13 @@ At a high level, MemberTwin could expose a resource tree like this:
 
 **Document Types**
 
-- `ClaimSummary`  
+- `ClaimSummary`
   - Service date, provider, high-level service category.
   - Billed vs allowed vs paid vs member responsibility.
   - Status (pending, paid, denied).
   - Link to EOB attachment.
 
-- `EOBSummary`  
+- `EOBSummary`
   - Member-focused explanation in plain language.
   - Highlighted line items that impact member cost.
 
@@ -297,7 +297,7 @@ At a high level, MemberTwin could expose a resource tree like this:
 
 **Document Types**
 
-- `CostEstimateSummary`  
+- `CostEstimateSummary`
   - Procedure/visit type.
   - Estimated range of member responsibility.
   - Assumptions (network status, typical utilization).
@@ -314,7 +314,7 @@ At a high level, MemberTwin could expose a resource tree like this:
 
 **Document Types**
 
-- `CommunicationThreadSummary`  
+- `CommunicationThreadSummary`
   - Type (SMS, email, in-app message, call log).
   - Participants (member, IH guides, clinicians).
   - High-level topic.
@@ -328,7 +328,7 @@ At a high level, MemberTwin could expose a resource tree like this:
 
 **Document Types**
 
-- `CommunicationPreferences`  
+- `CommunicationPreferences`
   - Preferred channels (SMS, email, app, phone).
   - Quiet hours / do-not-disturb windows.
   - Language preference.
@@ -342,7 +342,7 @@ At a high level, MemberTwin could expose a resource tree like this:
 
 **Document Types**
 
-- `ConsentSummary`  
+- `ConsentSummary`
   - Type of consent (data sharing, EMO, program enrollment, text messaging).
   - Scope and duration.
   - Status (active, revoked, expired).
@@ -359,7 +359,7 @@ At a high level, MemberTwin could expose a resource tree like this:
 
 **Document Types**
 
-- `RecommendationSnapshot`  
+- `RecommendationSnapshot`
   - Next-best-action from the Brain.
   - Rationale (why recommended).
   - Suggested channel and timing.
@@ -373,7 +373,7 @@ At a high level, MemberTwin could expose a resource tree like this:
 
 **Document Types**
 
-- `RiskProfileSummary`  
+- `RiskProfileSummary`
   - Risk bands (e.g., low/medium/high for cost, utilization, clinical risk).
   - Key drivers (e.g., chronic conditions, recent events).
   - Relationship to active programs and plans.
@@ -390,7 +390,7 @@ At a high level, MemberTwin could expose a resource tree like this:
 
 **Document Types**
 
-- `AttachmentDescriptor`  
+- `AttachmentDescriptor`
   - Type (benefit booklet, EMO PDF, external report, uploaded document).
   - Source system.
   - Privacy level.
@@ -407,13 +407,13 @@ For prompt use, `search` would typically return **summaries** of attachments wit
 
 Finally, MemberTwin should define some **synthetic, cross-cutting documents** specifically optimized for LLM prompts and human dashboards:
 
-- `GuideHandoffSummary`  
+- `GuideHandoffSummary`
   - Short summary of who the member is, why they’re here, and what’s most urgent now.
 
-- `ClinicianVisitPrepSummary`  
+- `ClinicianVisitPrepSummary`
   - Key conditions, meds, recent labs, open actions, and member concerns for an upcoming visit.
 
-- `MemberSelfServiceSummary`  
+- `MemberSelfServiceSummary`
   - Plain-language summary tuned for member-facing agents: “Here’s what’s going on and what you can do next.”
 
 These synthetic documents would be resolved from resources like:
@@ -707,14 +707,13 @@ Below is a concrete proposal for the `memberTwin.chat` tool contract as exposed 
 
 ### 15.3 How Agents Would Use This
 
-- **Open or continue a session**  
+- **Open or continue a session**
   Call `memberTwin.chat` with `member_resource`, an optional `session_id`, the current user/agent message, and any inferred `intents`. Use the returned `session_id` for subsequent turns.
 
-- **Track and reuse context**  
+- **Track and reuse context**
   Look at `linked_resources` and `updated_synthetic_views` to know which documents to pull into future prompts via `search`/`readDocument`.
 
-- **Reason about side effects safely**  
+- **Reason about side effects safely**
   Use `side_effects` as a human- and machine-readable log of what changed (SRs created, tasks updated, memory updated), without having to inspect raw events.
 
 This keeps `chat` as the *control plane* for interaction, while ensuring all long-term memory and work artifacts remain visible as **documents** under the MemberTwin resource tree.
-

@@ -38,38 +38,38 @@ graph TB
         AGG[Aggregate Root]
         ES[Event Store<br/>Kafka + PostgreSQL]
     end
-    
+
     subgraph "Event Bus"
         KAFKA[Kafka Topics<br/>domain-events.*]
     end
-    
+
     subgraph "Read Side (Queries)"
         PROJ1[Projection:<br/>Member View]
         PROJ2[Projection:<br/>Task List]
         PROJ3[Projection:<br/>Analytics]
         READ_DB[(Read Database<br/>PostgreSQL)]
     end
-    
+
     subgraph "Frontend"
         QUERY[Query API]
     end
-    
+
     UI -->|Submit Command| CMD
     CMD -->|Validate| AGG
     AGG -->|Append Events| ES
     ES -->|Publish| KAFKA
-    
+
     KAFKA -->|Subscribe| PROJ1
     KAFKA -->|Subscribe| PROJ2
     KAFKA -->|Subscribe| PROJ3
-    
+
     PROJ1 -->|Update| READ_DB
     PROJ2 -->|Update| READ_DB
     PROJ3 -->|Update| READ_DB
-    
+
     UI -->|Query| QUERY
     QUERY -->|Read| READ_DB
-    
+
     style CMD fill:#ffe1e1
     style KAFKA fill:#e1ffe1
     style READ_DB fill:#e1f5ff
@@ -169,16 +169,16 @@ class TaskCommandHandler {
   async handle(command: CompleteTaskCommand): Promise<Event[]> {
     // 1. Load aggregate from event store
     const task = await this.taskRepository.load(command.data.task_id);
-    
+
     // 2. Execute command on aggregate (business logic)
     const events = task.complete(command.actor, command.data);
-    
+
     // 3. Persist events to event store
     await this.eventStore.append(task.id, events);
-    
+
     // 4. Publish events to Kafka
     await this.eventBus.publish(events);
-    
+
     return events;
   }
 }
@@ -247,10 +247,10 @@ class Task {
   private assignedTo: string;
   private completedAt?: string;
   private version: number;
-  
+
   // Uncommitted events (pending save)
   private uncommittedEvents: Event[] = [];
-  
+
   /**
    * Command: Complete task
    * Returns events that should be persisted
@@ -260,11 +260,11 @@ class Task {
     if (this.status === TaskStatus.Completed) {
       throw new Error("Task already completed");
     }
-    
+
     if (actor.id !== this.assignedTo) {
       throw new Error("Only assigned coordinator can complete task");
     }
-    
+
     // Create event (fact that something happened)
     const event: TaskCompletedEvent = {
       id: generateEventId(),
@@ -281,16 +281,16 @@ class Task {
         completed_at: new Date().toISOString(),
       },
     };
-    
+
     // Apply event to update internal state
     this.apply(event);
-    
+
     // Track uncommitted event
     this.uncommittedEvents.push(event);
-    
+
     return [event];
   }
-  
+
   /**
    * Apply event to update state (also used when replaying)
    */
@@ -302,28 +302,28 @@ class Task {
         this.assignedTo = event.data.assigned_to;
         this.version = event.version;
         break;
-        
+
       case "TaskCompleted":
         this.status = TaskStatus.Completed;
         this.completedAt = event.data.completed_at;
         this.version = event.version;
         break;
-        
+
       // ... other event types
     }
   }
-  
+
   /**
    * Load aggregate from event history (event replay)
    */
   static fromHistory(events: Event[]): Task {
     const task = new Task();
-    
+
     // Replay all events to rebuild current state
     for (const event of events) {
       task.apply(event);
     }
-    
+
     return task;
   }
 }
@@ -342,12 +342,12 @@ interface EventStore {
    * Optimistic concurrency control via version check
    */
   append(aggregateId: string, events: Event[]): Promise<void>;
-  
+
   /**
    * Load all events for an aggregate
    */
   load(aggregateId: string): Promise<Event[]>;
-  
+
   /**
    * Load events after a specific version (for incremental updates)
    */
@@ -369,10 +369,10 @@ CREATE TABLE event_store (
     actor_id VARCHAR(255) NOT NULL,
     data JSONB NOT NULL,
     metadata JSONB,
-    
+
     -- Optimistic concurrency control
     UNIQUE (aggregate_id, version),
-    
+
     -- Indexes for fast queries
     INDEX idx_aggregate (aggregate_id, version),
     INDEX idx_aggregate_type (aggregate_type, timestamp),
@@ -390,7 +390,7 @@ CREATE TABLE event_store_2025_11 PARTITION OF event_store
 class PostgresEventStore implements EventStore {
   async append(aggregateId: string, events: Event[]): Promise<void> {
     const tx = await this.db.transaction();
-    
+
     try {
       for (const event of events) {
         // Insert event (will fail if version conflict)
@@ -412,41 +412,41 @@ class PostgresEventStore implements EventStore {
           event.metadata,
         ]);
       }
-      
+
       await tx.commit();
-      
+
       // Publish to Kafka for projections
       await this.kafka.publish(events);
-      
+
     } catch (err) {
       await tx.rollback();
-      
+
       // Check if optimistic concurrency violation
       if (err.code === '23505') {  // Unique constraint violation
         throw new ConcurrencyError('Aggregate has been modified by another process');
       }
-      
+
       throw err;
     }
   }
-  
+
   async load(aggregateId: string): Promise<Event[]> {
     const result = await this.db.query(`
       SELECT * FROM event_store
       WHERE aggregate_id = $1
       ORDER BY version ASC
     `, [aggregateId]);
-    
+
     return result.rows.map(row => this.mapRowToEvent(row));
   }
-  
+
   async loadFromVersion(aggregateId: string, version: number): Promise<Event[]> {
     const result = await this.db.query(`
       SELECT * FROM event_store
       WHERE aggregate_id = $1 AND version > $2
       ORDER BY version ASC
     `, [aggregateId, version]);
-    
+
     return result.rows.map(row => this.mapRowToEvent(row));
   }
 }
@@ -467,7 +467,7 @@ class TaskListProjection {
       await this.handleEvent(event);
     });
   }
-  
+
   /**
    * Handle event and update read model
    */
@@ -476,17 +476,17 @@ class TaskListProjection {
       case 'TaskCreated':
         await this.handleTaskCreated(event);
         break;
-        
+
       case 'TaskCompleted':
         await this.handleTaskCompleted(event);
         break;
-        
+
       case 'TaskAssigned':
         await this.handleTaskAssigned(event);
         break;
     }
   }
-  
+
   /**
    * Update read model for TaskCreated event
    */
@@ -504,7 +504,7 @@ class TaskListProjection {
       event.timestamp,
     ]);
   }
-  
+
   /**
    * Update read model for TaskCompleted event
    */
@@ -538,7 +538,7 @@ CREATE TABLE task_list_view (
     created_at TIMESTAMPTZ NOT NULL,
     completed_at TIMESTAMPTZ,
     completed_by VARCHAR(255),
-    
+
     -- Indexes for common queries
     INDEX idx_assigned_to (assigned_to, status, created_at),
     INDEX idx_member_id (member_id, status),
@@ -587,7 +587,7 @@ class RTEEligibilityCheck {
   private result?: EligibilityResult;
   private stediRequestId?: string;
   private version: number;
-  
+
   /**
    * Command: Initiate eligibility check
    */
@@ -596,7 +596,7 @@ class RTEEligibilityCheck {
     if (this.status !== CheckStatus.New) {
       throw new Error('Check already initiated');
     }
-    
+
     // Create event
     const event: EligibilityCheckInitiatedEvent = {
       id: generateEventId(),
@@ -613,17 +613,17 @@ class RTEEligibilityCheck {
         initiated_at: new Date().toISOString(),
       },
     };
-    
+
     this.apply(event);
     return [event];
   }
-  
+
   /**
    * Command: Record Stedi response
    */
   recordStediResponse(response: StediResponse): Event[] {
     const events: Event[] = [];
-    
+
     // Event 1: Response received
     events.push({
       id: generateEventId(),
@@ -638,7 +638,7 @@ class RTEEligibilityCheck {
         latency_ms: response.latency_ms,
       },
     });
-    
+
     // Event 2: Check completed
     if (response.eligible !== undefined) {
       events.push({
@@ -661,11 +661,11 @@ class RTEEligibilityCheck {
         },
       });
     }
-    
+
     events.forEach(e => this.apply(e));
     return events;
   }
-  
+
   /**
    * Apply events to rebuild state
    */
@@ -678,19 +678,19 @@ class RTEEligibilityCheck {
         this.initiatedAt = event.data.initiated_at;
         this.version = event.version;
         break;
-        
+
       case 'RTEResponseReceivedFromStedi':
         this.stediRequestId = event.data.stedi_request_id;
         this.version = event.version;
         break;
-        
+
       case 'EligibilityCheckCompleted':
         this.status = CheckStatus.Completed;
         this.completedAt = event.data.completed_at;
         this.result = event.data.result;
         this.version = event.version;
         break;
-        
+
       case 'EligibilityCheckFailed':
         this.status = CheckStatus.Failed;
         this.version = event.version;
@@ -846,7 +846,7 @@ kafka.subscribe('domain-events.task.*', async (event) => {
 // Query: Get my tasks (care coordinator view)
 app.get('/api/tasks/my-tasks', async (req, res) => {
   const ccId = req.user.id;
-  
+
   // Query read model (FAST! - no joins, no aggregates)
   const tasks = await db.query(`
     SELECT * FROM task_list_view
@@ -854,14 +854,14 @@ app.get('/api/tasks/my-tasks', async (req, res) => {
     ORDER BY created_at DESC
     LIMIT 50
   `, [ccId]);
-  
+
   res.json(tasks.rows);
 });
 
 // Query: Get member task history (member view)
 app.get('/api/tasks/member/:memberId', async (req, res) => {
   const memberId = req.params.memberId;
-  
+
   // Query read model (FAST!)
   const tasks = await db.query(`
     SELECT * FROM member_task_history
@@ -869,7 +869,7 @@ app.get('/api/tasks/member/:memberId', async (req, res) => {
     ORDER BY completed_at DESC
     LIMIT 20
   `, [memberId]);
-  
+
   res.json(tasks.rows);
 });
 ```
@@ -894,7 +894,7 @@ class MemberOnboardingWorkflow {
   async execute(memberId: string): Promise<void> {
     // Step 1: Check eligibility
     const eligibility = await activities.checkEligibility(memberId);
-    
+
     // Emit event
     await this.emitEvent({
       type: 'OnboardingStepCompleted',
@@ -904,14 +904,14 @@ class MemberOnboardingWorkflow {
         result: eligibility,
       },
     });
-    
+
     if (!eligibility.eligible) {
       throw new Error('Member not eligible');
     }
-    
+
     // Step 2: Setup profile
     await activities.setupProfile(memberId);
-    
+
     // Emit event
     await this.emitEvent({
       type: 'OnboardingStepCompleted',
@@ -920,10 +920,10 @@ class MemberOnboardingWorkflow {
         step: 'profile_setup',
       },
     });
-    
+
     // Step 3: Send welcome email
     await activities.sendWelcomeEmail(memberId);
-    
+
     // Emit final event
     await this.emitEvent({
       type: 'MemberOnboardingCompleted',
@@ -933,7 +933,7 @@ class MemberOnboardingWorkflow {
       },
     });
   }
-  
+
   /**
    * Helper: Emit event to Kafka
    */
@@ -959,7 +959,7 @@ class MemberOnboardingCompensation {
         failed_at: new Date().toISOString(),
       },
     });
-    
+
     // Rollback actions
     switch (failedStep) {
       case 'profile_setup':
@@ -969,7 +969,7 @@ class MemberOnboardingCompensation {
           data: { member_id: memberId },
         });
         break;
-      
+
       case 'welcome_email':
         // No rollback needed for email
         break;
@@ -998,7 +998,7 @@ class TaskService {
       SET status = 'completed', completed_at = NOW()
       WHERE id = $1
     `, [taskId]);
-    
+
     // 2. NEW: Publish domain event
     await this.eventBus.publish({
       type: 'TaskCompleted',
@@ -1062,13 +1062,13 @@ async completeTask(taskId: string, data: CompleteTaskData): Promise<void> {
 async completeTask(taskId: string, data: CompleteTaskData): Promise<void> {
   // 1. Load aggregate from event store
   const task = await this.taskRepository.load(taskId);
-  
+
   // 2. Execute command (business logic)
   const events = task.complete(data);
-  
+
   // 3. Persist events
   await this.eventStore.append(taskId, events);
-  
+
   // 4. Publish events
   await this.eventBus.publish(events);
 }
@@ -1155,10 +1155,10 @@ async completeTask(taskId: string, data: CompleteTaskData): Promise<void> {
 const completeTask = async (taskId: string) => {
   // Optimistically update UI
   setTaskStatus(taskId, 'completed');
-  
+
   // Send command
   const result = await api.completeTask(taskId);
-  
+
   // If command fails, revert UI
   if (!result.success) {
     setTaskStatus(taskId, 'pending');
@@ -1188,18 +1188,18 @@ return {
 const waitForConsistency = async (taskId: string, expectedVersion: number) => {
   let retries = 0;
   const maxRetries = 10;
-  
+
   while (retries < maxRetries) {
     const task = await api.getTask(taskId);
-    
+
     if (task.version >= expectedVersion) {
       return task;  // Consistent!
     }
-    
+
     await sleep(100);  // Wait 100ms
     retries++;
   }
-  
+
   throw new Error('Consistency timeout');
 };
 ```
@@ -1218,13 +1218,13 @@ const eventStoreMetrics = {
     help: 'Total events appended to event store',
     labelNames: ['aggregate_type', 'event_type'],
   }),
-  
+
   appendLatency: new Histogram({
     name: 'event_store_append_latency_seconds',
     help: 'Latency of event store append operations',
     labelNames: ['aggregate_type'],
   }),
-  
+
   concurrencyConflicts: new Counter({
     name: 'event_store_concurrency_conflicts_total',
     help: 'Total optimistic concurrency conflicts',
@@ -1243,7 +1243,7 @@ const projectionLagMetrics = {
     help: 'Seconds behind event stream',
     labelNames: ['projection_name'],
   }),
-  
+
   eventsProcessed: new Counter({
     name: 'projection_events_processed_total',
     help: 'Total events processed by projection',
@@ -1255,16 +1255,16 @@ const projectionLagMetrics = {
 class TaskListProjection {
   async handleEvent(event: Event): Promise<void> {
     const startTime = Date.now();
-    
+
     // Process event
     await this.updateReadModel(event);
-    
+
     // Update metrics
     projectionLagMetrics.eventsProcessed.inc({
       projection_name: 'task_list',
       event_type: event.type,
     });
-    
+
     const lag = (Date.now() - new Date(event.timestamp).getTime()) / 1000;
     projectionLagMetrics.lagSeconds.set({
       projection_name: 'task_list',

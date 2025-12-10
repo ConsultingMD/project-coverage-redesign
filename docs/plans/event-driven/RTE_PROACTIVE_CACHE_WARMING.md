@@ -32,33 +32,33 @@ graph TB
         MCRON[Member Cron<br/>Evaluates members every 15min]
         ML[ML Model<br/>App Usage Predictor]
         KAFKA[Kafka<br/>digital-twin.prediction.*]
-        
+
         MCRON -->|Query signals| ML
         ML -->|Probability > 0.8| KAFKA
     end
-    
+
     subgraph "RTE Cache Warmer (NEW)"
         CONSUMER[Event Consumer]
         BATCH[Batch Job Builder]
         STEDI_BATCH[Stedi Batch API<br/>10,000 checks/batch]
         CACHE[RTE Cache<br/>Redis/ElastiCache]
-        
+
         KAFKA -->|app_usage_likely| CONSUMER
         CONSUMER -->|Build batch| BATCH
         BATCH -->|Submit| STEDI_BATCH
         STEDI_BATCH -->|Results| CACHE
     end
-    
+
     subgraph "Member Experience"
         APP[Member opens app]
         RTE_API[RTE API]
         DISPLAY[Instant eligibility display]
-        
+
         APP -->|Check eligibility| RTE_API
         RTE_API -->|Cache hit!| CACHE
         CACHE -->|< 50ms| DISPLAY
     end
-    
+
     style MCRON fill:#e1f5ff
     style KAFKA fill:#e1ffe1
     style CACHE fill:#ffe1e1
@@ -115,7 +115,7 @@ package rte_cache_warmer
 import (
     "context"
     "time"
-    
+
     "github.com/ConsultingMD/go-common/kafka"
     "github.com/ConsultingMD/realtime-eligibility/internal/cache"
     "github.com/ConsultingMD/realtime-eligibility/internal/stedi"
@@ -129,7 +129,7 @@ type CacheWarmer struct {
 
 func (w *CacheWarmer) Start(ctx context.Context) error {
     // Subscribe to app usage predictions
-    return w.kafkaConsumer.Subscribe(ctx, "digital-twin.prediction.app_usage_likely", 
+    return w.kafkaConsumer.Subscribe(ctx, "digital-twin.prediction.app_usage_likely",
         w.handleAppUsagePrediction)
 }
 
@@ -138,13 +138,13 @@ func (w *CacheWarmer) handleAppUsagePrediction(ctx context.Context, event *AppUs
     if event.Data.Probability < 0.80 {
         return nil  // Skip low-probability predictions
     }
-    
+
     // Check if cache already populated recently
     cacheAge, err := w.cacheClient.GetAge(ctx, event.MemberID)
     if err == nil && cacheAge < 1*time.Hour {
         return nil  // Cache still fresh
     }
-    
+
     // Submit batch warming request
     return w.warmCache(ctx, event.MemberID, event.Data.PredictedTime)
 }
@@ -243,20 +243,20 @@ type BatchClient struct {
 // SubmitBatch submits a batch of eligibility checks
 func (c *BatchClient) SubmitBatch(ctx context.Context, checks []EligibilityCheck) (*BatchSubmission, error) {
     batchID := fmt.Sprintf("batch_%s", time.Now().Format("20060102_150405"))
-    
+
     req := &BatchRequest{
         BatchID:     batchID,
         Checks:      checks,
         CallbackURL: "https://realtime-eligibility.includedhealth.com/api/v1/batch-callback",
     }
-    
-    resp, err := c.httpClient.Post(ctx, 
+
+    resp, err := c.httpClient.Post(ctx,
         "https://healthcare.us.stedi.com/2024-04-01/eligibility/batch",
         req)
     if err != nil {
         return nil, err
     }
-    
+
     return &BatchSubmission{
         BatchID:              resp.BatchID,
         Status:               resp.Status,
@@ -271,7 +271,7 @@ func (c *BatchClient) HandleBatchCallback(ctx context.Context, callback *BatchCa
     if !c.validateSignature(callback) {
         return errors.New("invalid webhook signature")
     }
-    
+
     // Process results
     for _, result := range callback.Results {
         if result.Status == "success" {
@@ -279,13 +279,13 @@ func (c *BatchClient) HandleBatchCallback(ctx context.Context, callback *BatchCa
             cacheKey := fmt.Sprintf("rte:eligibility:%s", result.CheckID)
             cacheData := result.Eligibility
             cacheTTL := 24 * time.Hour
-            
+
             if err := c.cacheClient.Set(ctx, cacheKey, cacheData, cacheTTL); err != nil {
                 log.Error("Failed to cache result", "check_id", result.CheckID, "error", err)
             }
         }
     }
-    
+
     return nil
 }
 ```
@@ -323,7 +323,7 @@ type BatchQueue struct {
 
 func (q *BatchQueue) Start(ctx context.Context) {
     q.ticker = time.NewTicker(5 * time.Minute)
-    
+
     for {
         select {
         case <-q.ticker.C:
@@ -338,7 +338,7 @@ func (q *BatchQueue) Start(ctx context.Context) {
 func (q *BatchQueue) Add(check EligibilityCheck) {
     q.mu.Lock()
     defer q.mu.Unlock()
-    
+
     q.pending = append(q.pending, check)
 }
 
@@ -347,13 +347,13 @@ func (q *BatchQueue) flush(ctx context.Context) error {
     checks := q.pending
     q.pending = nil
     q.mu.Unlock()
-    
+
     if len(checks) == 0 {
         return nil
     }
-    
+
     log.Info("Flushing batch queue", "count", len(checks))
-    
+
     // Submit to Stedi Batch API
     _, err := q.stediAPI.SubmitBatch(ctx, checks)
     return err
@@ -391,12 +391,12 @@ func (w *CacheWarmer) populateCache(ctx context.Context, results []BatchResult) 
         if result.Status != "success" {
             continue
         }
-        
+
         // Build cache key
-        key := fmt.Sprintf("rte:eligibility:%s:%s", 
-            result.MemberID, 
+        key := fmt.Sprintf("rte:eligibility:%s:%s",
+            result.MemberID,
             result.TradingPartnerID)
-        
+
         // Build cache value
         value := CachedEligibility{
             Eligible:        result.Eligibility.Eligible,
@@ -407,17 +407,17 @@ func (w *CacheWarmer) populateCache(ctx context.Context, results []BatchResult) 
             CachedAt:        time.Now(),
             Source:          "stedi_batch",
         }
-        
+
         // Store in Redis with 24h TTL
         if err := w.cacheClient.Set(ctx, key, value, 24*time.Hour); err != nil {
             log.Error("Failed to cache result", "member_id", result.MemberID, "error", err)
             continue
         }
-        
+
         // Emit metric
         metrics.RTECacheWarmed.Inc()
     }
-    
+
     return nil
 }
 ```
@@ -459,16 +459,16 @@ func (r *MemberResolver) Eligibility(ctx context.Context, args struct {
 }) (*EligibilityResult, error) {
     memberID := GetMemberIDFromContext(ctx)
     tradingPartnerID := GetTradingPartnerIDFromContext(ctx)
-    
+
     // Default to PREFER_CACHE
     pref := CachePreferencePreferCache
     if args.CachePreference != nil {
         pref = *args.CachePreference
     }
-    
+
     // Build cache key
     cacheKey := fmt.Sprintf("rte:eligibility:%s:%s", memberID, tradingPartnerID)
-    
+
     // Try cache first (if not BYPASS_CACHE)
     if pref != CachePreferenceBypassCache {
         cached, err := r.cacheClient.Get(ctx, cacheKey)
@@ -483,25 +483,25 @@ func (r *MemberResolver) Eligibility(ctx context.Context, args struct {
                 Source:        "cache",
             }, nil
         }
-        
+
         // Cache miss
         metrics.RTECacheMiss.Inc()
-        
+
         // If CACHE_ONLY, return error
         if pref == CachePreferenceCacheOnly {
             return nil, errors.New("cache miss and CACHE_ONLY requested")
         }
     }
-    
+
     // Fall back to Stedi real-time API
     result, err := r.stediClient.CheckEligibility(ctx, memberID, tradingPartnerID)
     if err != nil {
         return nil, err
     }
-    
+
     // Populate cache for future requests
     go r.cacheClient.Set(context.Background(), cacheKey, result, 24*time.Hour)
-    
+
     return &EligibilityResult{
         Eligible:      result.Eligible,
         CopayAmount:   result.CopayAmount,

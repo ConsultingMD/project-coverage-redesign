@@ -9,29 +9,29 @@ This guide ensures consistency across all Digital Twin MCP documentation and pro
 ```mermaid
 graph TD
     MASTER[📚 DIGITAL_TWIN_MCP_MASTER.md<br/>You are here]
-    
+
     subgraph "Core Architecture"
         PATTERN[📄 DIGITAL_TWIN_MCP_PATTERN.md<br/>Core pattern & architecture]
         CATALOG[📄 MEMBER_TWIN_RESOURCES_CATALOG.md<br/>Resource definitions]
     end
-    
+
     subgraph "Integration Guides"
         EVENTS[📄 DIGITAL_TWIN_MCP_RESOURCES_INTEGRATION.md<br/>Event-driven integration]
         AUTH[📄 MCP_AUTHORIZATION_AUTHZILLA_INTEGRATION.md<br/>Authorization]
         SECURITY[📄 MCP_SECURITY_BEST_PRACTICES_IH.md<br/>Security]
         SAMPLING[📄 MCP_SAMPLING_ELICITATION_PATTERNS.md<br/>Sampling & elicitation]
     end
-    
+
     subgraph "Implementation"
         MVP[📄 DIGITAL_TWIN_MCP_MVP_POC.md<br/>MVP proof of concept]
         MIGRATION[📄 AGENT_PLATFORM_DIGITAL_TWIN_MIGRATION.md<br/>Migration plan]
     end
-    
+
     subgraph "Supporting"
         SUMMARY[📄 MCP_RESOURCES_AND_EVENTS_SUMMARY.md<br/>Executive summary]
         REVIEW[📄 Review & correction docs]
     end
-    
+
     MASTER --> PATTERN
     MASTER --> CATALOG
     PATTERN --> EVENTS
@@ -82,9 +82,9 @@ graph TD
 # Standard tool names (use dots for namespacing)
 tools:
   - memberTwin.search       # ✅ Correct
-  - memberTwin.readDocument  # ✅ Correct  
+  - memberTwin.readDocument  # ✅ Correct
   - memberTwin.chat         # ✅ Correct
-  
+
   # NOT these variations:
   - memberTwin_search       # ❌ Underscore
   - member-twin-search      # ❌ Hyphens
@@ -136,11 +136,11 @@ const (
 ```python
 # Class naming
 class MemberTwinClient:  # PascalCase
-    
+
     # Method naming
     def read_document(self, uri: str) -> dict:  # snake_case
         pass
-    
+
     # Tool decorator
     @tool
     def memberTwin_search(query: str, member_id: str) -> list:
@@ -213,23 +213,23 @@ graph TB
         READ[readDocument]
         CHAT[chat]
     end
-    
+
     subgraph "Layer 2: Resources"
         PROFILE[Profile]
         COVERAGE[Coverage]
         CARE[Care]
     end
-    
+
     subgraph "Layer 3: Backend Services"
         CAREFLOW[CareFlow]
         RTE[RTE]
         BRAIN[The Brain]
     end
-    
+
     SEARCH --> PROFILE
     READ --> COVERAGE
     CHAT --> CARE
-    
+
     PROFILE --> CAREFLOW
     COVERAGE --> RTE
     CARE --> BRAIN
@@ -246,7 +246,7 @@ sequenceDiagram
     participant Kafka
     participant WebSocket as WebSocket Gateway
     participant Frontend
-    
+
     Client->>MCP: Update resource
     MCP->>Kafka: Emit event
     Kafka->>WebSocket: Consume event

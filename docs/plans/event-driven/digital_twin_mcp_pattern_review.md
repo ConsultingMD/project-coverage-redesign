@@ -65,11 +65,11 @@ These systems are accurately described in the documents:
 - Acts as single source of truth for downstream intelligence
 - Actively emits predictive events when patterns/risks are detected
 
-**Suggested Correction**: 
+**Suggested Correction**:
 ```markdown
-This document describes the **MCP interface implementation** for the Digital Twin Platform, 
-which is the "Sense" layer in Included Health's 2025 Tech Vision. The Digital Twin concept 
-itself is already approved and in development; this proposal defines how agents will 
+This document describes the **MCP interface implementation** for the Digital Twin Platform,
+which is the "Sense" layer in Included Health's 2025 Tech Vision. The Digital Twin concept
+itself is already approved and in development; this proposal defines how agents will
 interact with it through MCP tools.
 ```
 
@@ -92,7 +92,7 @@ Included Health already has a growing MCP ecosystem:
 - MCProxy provides unified access to multiple MCP servers
 - go-common includes MCP server configuration guides
 
-The Digital Twin MCP servers will follow these established patterns while extending 
+The Digital Twin MCP servers will follow these established patterns while extending
 them for person-centric data access.
 ```
 
@@ -147,7 +147,7 @@ The Digital Twin MCP Pattern implements the **official 2025 Sense-Decide-Act arc
   - Continuous signal ingestion
   - Predictive event emission
 
-- **Decide**: The Brain (Recommendation Platform)  
+- **Decide**: The Brain (Recommendation Platform)
   - AI-driven NBA generation
   - Two-stage ranking process
   - Context-aware recommendations

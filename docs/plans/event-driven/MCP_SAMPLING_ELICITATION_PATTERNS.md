@@ -55,24 +55,24 @@ class ResourceSampler {
   ): Promise<Resource[]> {
     // Get all available resources
     const allResources = await this.listResources(memberId);
-    
+
     // Sort by priority (1.0 = most important)
-    const sorted = allResources.sort((a, b) => 
+    const sorted = allResources.sort((a, b) =>
       (b.annotations?.priority || 0) - (a.annotations?.priority || 0)
     );
-    
+
     // Sample until token limit
     const sampled: Resource[] = [];
     let tokenCount = 0;
-    
+
     for (const resource of sorted) {
       const estimatedTokens = this.estimateTokens(resource);
       if (tokenCount + estimatedTokens > maxTokens) break;
-      
+
       sampled.push(resource);
       tokenCount += estimatedTokens;
     }
-    
+
     return sampled;
   }
 }
@@ -88,7 +88,7 @@ class RecencySampler {
     targetCount: number     // How many to sample
   }): Resource[] {
     const now = new Date();
-    
+
     return resources
       .filter(r => {
         const age = now - new Date(r.annotations?.lastModified);
@@ -101,12 +101,12 @@ class RecencySampler {
       .sort((a, b) => b.score - a.score)
       .slice(0, options.targetCount);
   }
-  
+
   private calculateScore(resource: Resource, now: Date, recencyWeight: number): number {
     const priority = resource.annotations?.priority || 0.5;
     const age = now - new Date(resource.annotations?.lastModified);
     const recencyScore = 1 / (1 + age.days());  // Decay function
-    
+
     return (priority * (1 - recencyWeight)) + (recencyScore * recencyWeight);
   }
 }
@@ -125,7 +125,7 @@ class RelevanceSampler {
     }
   ): Promise<Resource[]> {
     const resources = await this.listResources(memberId);
-    
+
     return resources
       .map(r => ({
         ...r,
@@ -134,10 +134,10 @@ class RelevanceSampler {
       .filter(r => r.relevanceScore > 0.3)  // Threshold
       .sort((a, b) => b.relevanceScore - a.relevanceScore);
   }
-  
+
   private calculateRelevance(resource: Resource, context: any): number {
     let score = 0;
-    
+
     // Check condition overlap
     const resourceConditions = resource.annotations?.relevance?.conditions || [];
     const conditionOverlap = this.jaccardSimilarity(
@@ -145,13 +145,13 @@ class RelevanceSampler {
       context.currentConditions
     );
     score += conditionOverlap * 0.5;
-    
+
     // Check temporal relevance
     if (resource.uri.includes('/appointments')) {
       const hasUpcoming = context.upcomingAppointments.length > 0;
       score += hasUpcoming ? 0.3 : 0;
     }
-    
+
     // Check symptom relevance
     if (resource.uri.includes('/clinical')) {
       const symptomMatch = this.checkSymptomRelevance(
@@ -160,7 +160,7 @@ class RelevanceSampler {
       );
       score += symptomMatch * 0.2;
     }
-    
+
     return Math.min(1.0, score);
   }
 }
@@ -206,7 +206,7 @@ class ProgressiveRefinementElicitor {
         expectedResponses: ["good", "okay", "not well", "pain", "tired"]
       }]
     });
-    
+
     // Narrow based on response
     if (initial.sentiment === 'negative' || initial.keywords.includes('pain')) {
       const followup = await this.chat({
@@ -216,7 +216,7 @@ class ProgressiveRefinementElicitor {
           expectedResponses: ["head", "chest", "back", "joints", "abdomen"]
         }]
       });
-      
+
       // Further refinement
       if (followup.entities.bodyPart) {
         const detailed = await this.chat({
@@ -227,7 +227,7 @@ class ProgressiveRefinementElicitor {
             validation: { min: 1, max: 10 }
           }]
         });
-        
+
         // Store structured data
         await this.updateResource({
           uri: `mcp://twins/member/${session.memberId}/clinical/symptoms`,
@@ -241,7 +241,7 @@ class ProgressiveRefinementElicitor {
         });
       }
     }
-    
+
     return this.completeElicitation(session);
   }
 }
@@ -258,9 +258,9 @@ class ChecklistElicitor {
       "Over the last 2 weeks, how often have you had trouble falling asleep, staying asleep, or sleeping too much?",
       // ... rest of PHQ-9 questions
     ];
-    
+
     const responses: number[] = [];
-    
+
     for (const [index, question] of questions.entries()) {
       const response = await this.chat({
         message: question,
@@ -268,16 +268,16 @@ class ChecklistElicitor {
           name: `phq9.question.${index + 1}`,
           expectedResponses: [
             "Not at all (0)",
-            "Several days (1)", 
+            "Several days (1)",
             "More than half the days (2)",
             "Nearly every day (3)"
           ],
           requireSelection: true
         }]
       });
-      
+
       responses.push(response.score);
-      
+
       // Adaptive - if score is high, add crisis resources
       if (response.score >= 2 && index <= 1) {
         await this.addContext({
@@ -286,9 +286,9 @@ class ChecklistElicitor {
         });
       }
     }
-    
+
     const totalScore = responses.reduce((a, b) => a + b, 0);
-    
+
     // Store assessment
     await this.createResource({
       uri: `mcp://twins/member/${memberId}/assessments/phq9/${Date.now()}`,
@@ -300,7 +300,7 @@ class ChecklistElicitor {
         nextDue: this.calculateNextDue(totalScore)
       }
     });
-    
+
     return { responses, totalScore };
   }
 }
@@ -317,7 +317,7 @@ class SymptomExplorer {
       associatedSymptoms: [],
       timeline: {}
     };
-    
+
     // Use OPQRST framework for systematic exploration
     const opqrst = {
       onset: await this.elicitOnset(initialSymptom),
@@ -327,10 +327,10 @@ class SymptomExplorer {
       severity: await this.elicitSeverity(initialSymptom),
       time: await this.elicitTiming(initialSymptom)
     };
-    
+
     // Check for red flags based on symptom + characteristics
     const redFlags = await this.checkRedFlags(initialSymptom, opqrst);
-    
+
     if (redFlags.length > 0) {
       // Immediately escalate
       await this.escalate({
@@ -340,7 +340,7 @@ class SymptomExplorer {
         urgency: 'immediate'
       });
     }
-    
+
     // Store structured symptom data
     await this.updateResource({
       uri: `mcp://twins/member/${memberId}/clinical/current-symptoms`,
@@ -351,10 +351,10 @@ class SymptomExplorer {
         redFlags
       }
     });
-    
+
     return profile;
   }
-  
+
   private async elicitOnset(symptom: string): Promise<OnsetInfo> {
     const response = await this.chat({
       message: `When did your ${symptom} start? Was it sudden or gradual?`,
@@ -363,7 +363,7 @@ class SymptomExplorer {
         extractEntities: ["timeframe", "onset_type"]
       }]
     });
-    
+
     return {
       timeframe: response.entities.timeframe,
       type: response.entities.onset_type,  // 'sudden' | 'gradual'
@@ -385,7 +385,7 @@ As we elicit information, we can dynamically adjust what resources to sample:
 class AdaptiveSampler {
   private currentContext: Resource[] = [];
   private elicitationHistory: ElicitationEvent[] = [];
-  
+
   async adjustContext(
     memberId: string,
     elicitationResult: ElicitationResult
@@ -393,24 +393,24 @@ class AdaptiveSampler {
     // Analyze what we learned
     const topics = this.extractTopics(elicitationResult);
     const concerns = this.extractConcerns(elicitationResult);
-    
+
     // Remove less relevant resources
     this.currentContext = this.currentContext.filter(r => {
       const stillRelevant = this.checkRelevance(r, topics, concerns);
       return stillRelevant || r.annotations?.priority > 0.8;
     });
-    
+
     // Add newly relevant resources
     const newlyRelevant = await this.findRelevantResources(
       memberId,
       topics,
       concerns
     );
-    
+
     for (const resource of newlyRelevant) {
       if (!this.currentContext.find(r => r.uri === resource.uri)) {
         this.currentContext.push(resource);
-        
+
         // Notify about context change
         await this.notifyContextChange({
           added: resource,
@@ -419,7 +419,7 @@ class AdaptiveSampler {
         });
       }
     }
-    
+
     // Re-sort by updated relevance
     this.currentContext.sort((a, b) => {
       const aScore = this.scoreRelevance(a, topics, concerns);
@@ -448,23 +448,23 @@ class EmergencyTriageElicitor {
       },
       maxCount: 10
     });
-    
+
     // Rapid elicitation
     const symptoms = await this.rapidSymptomScreen();
-    
+
     // Adaptive sampling based on symptoms
     if (symptoms.includes('chest pain')) {
       // Add cardiac-related resources
       const cardiacResources = await this.sampler.sample({
         memberId,
-        filter: { 
+        filter: {
           tags: ['cardiac', 'heart'],
           recency: '30d'
         }
       });
       criticalResources.push(...cardiacResources);
     }
-    
+
     return this.calculateTriage(symptoms, criticalResources);
   }
 }
@@ -483,9 +483,9 @@ class MedicationAdherenceElicitor {
         status: 'active'
       }
     });
-    
+
     const adherenceData: Map<string, AdherenceInfo> = new Map();
-    
+
     for (const med of meds) {
       // Elicit adherence for each medication
       const response = await this.chat({
@@ -496,7 +496,7 @@ class MedicationAdherenceElicitor {
           expectedResponses: ['yes', 'no', 'sometimes', 'forgot']
         }]
       });
-      
+
       if (response.value !== 'yes') {
         // Drill down on barriers
         const barriers = await this.elicitBarriers(med);
@@ -507,7 +507,7 @@ class MedicationAdherenceElicitor {
         });
       }
     }
-    
+
     return this.generateAdherenceReport(adherenceData);
   }
 }
@@ -527,9 +527,9 @@ class CareGapElicitor {
         recency: '6m'
       }
     });
-    
+
     const gaps: CareGap[] = [];
-    
+
     // Check preventive care
     for (const screening of carePlan.recommendedScreenings) {
       const completed = await this.chat({
@@ -539,7 +539,7 @@ class CareGapElicitor {
           screeningType: screening.type
         }]
       });
-      
+
       if (!completed.value) {
         gaps.push({
           type: 'preventive',
@@ -547,7 +547,7 @@ class CareGapElicitor {
           overdue: true,
           priority: screening.priority
         });
-        
+
         // Elicit barriers
         const barriers = await this.chat({
           message: `What's preventing you from getting your ${screening.name}?`,
@@ -556,11 +556,11 @@ class CareGapElicitor {
             expectedCategories: ['time', 'cost', 'access', 'fear', 'awareness']
           }]
         });
-        
+
         gaps[gaps.length - 1].barriers = barriers.categories;
       }
     }
-    
+
     return gaps;
   }
 }
@@ -577,24 +577,24 @@ class CareGapElicitor {
 sampling:
   default_strategy: priority_weighted
   max_context_tokens: 8000
-  
+
   strategies:
     emergency:
       priority_threshold: 0.9
       types: [allergies, medications, conditions]
       max_age: 7d
-      
+
     routine_visit:
       priority_threshold: 0.5
       types: [all]
       max_age: 90d
       recency_weight: 0.3
-      
+
     mental_health:
       priority_threshold: 0.6
       types: [assessments, medications, care_team]
       tags: [behavioral_health, mental_health]
-      
+
     chronic_care:
       priority_threshold: 0.7
       types: [conditions, medications, labs, vitals]
@@ -613,13 +613,13 @@ const ELICITATION_SCRIPTS = {
     { question: "When did it start?", type: "temporal" },
     { question: "What makes it better or worse?", type: "modifying_factors" }
   ],
-  
+
   medication_review: [
     { question: "Are you taking all your medications?", type: "boolean" },
     { question: "Any side effects?", type: "open", followup: true },
     { question: "Any concerns about your medications?", type: "open" }
   ],
-  
+
   depression_screen: [
     // PHQ-2 initial screen
     { question: "Over the past 2 weeks, have you felt little interest in doing things?", type: "frequency" },
@@ -648,10 +648,10 @@ class SamplingOptimizer {
   ): Promise<OptimizedStrategy> {
     // Analyze which resources were actually used
     const usagePatterns = this.analyzeUsage(historicalSessions);
-    
+
     // Adjust priorities based on actual usage
     const updatedPriorities = this.calculatePriorities(usagePatterns);
-    
+
     // Test different sampling strategies
     const strategies = [
       'priority_only',
@@ -659,11 +659,11 @@ class SamplingOptimizer {
       'relevance_based',
       'hybrid'
     ];
-    
+
     const results = await Promise.all(
       strategies.map(s => this.testStrategy(s, historicalSessions))
     );
-    
+
     return this.selectBestStrategy(results);
   }
 }

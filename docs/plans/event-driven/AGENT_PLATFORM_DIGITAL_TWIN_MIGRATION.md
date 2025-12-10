@@ -20,7 +20,7 @@ graph TB
         LLM[LLM Orchestrator]
         ROUTER[Tool Router]
     end
-    
+
     subgraph "Agent Collections"
         ROUTING[Routing & Support]
         COVERAGE[Coverage & Insurance]
@@ -29,7 +29,7 @@ graph TB
         VIRTUAL[Virtual Care]
         SMS[SMS Links]
     end
-    
+
     subgraph "Individual Tools"
         T1[get_coverage_answers]
         T2[OE_coverage_tool]
@@ -37,7 +37,7 @@ graph TB
         T4[route_billing_and_claims_questions]
         T5[...100+ more tools]
     end
-    
+
     subgraph "External APIs"
         API1[Coverage API]
         API2[Provider API]
@@ -45,7 +45,7 @@ graph TB
         API4[Virtual Care API]
         API5[CareFlow API]
     end
-    
+
     LLM --> ROUTER
     ROUTER --> ROUTING
     ROUTER --> COVERAGE
@@ -53,12 +53,12 @@ graph TB
     ROUTER --> CLAIMS
     ROUTER --> VIRTUAL
     ROUTER --> SMS
-    
+
     ROUTING --> T1
     COVERAGE --> T2
     VIRTUAL --> T3
     CLAIMS --> T4
-    
+
     T1 --> API1
     T2 --> API1
     T3 --> API4
@@ -127,7 +127,7 @@ def memberTwin_readDocument(uri: str):
 
 # Usage in LangGraph
 node = StateGraph()
-node.add_node("get_coverage", 
+node.add_node("get_coverage",
     lambda state: memberTwin_readDocument(
         f"mcp://twins/member/{state.member_id}/coverage"
     )
@@ -146,13 +146,13 @@ graph TB
         LLM[LLM Orchestrator]
         MCP_CLIENT[MCP Client]
     end
-    
+
     subgraph "Digital Twin MCP Server"
         SEARCH[memberTwin.search]
         READ[memberTwin.readDocument]
         CHAT[memberTwin.chat]
     end
-    
+
     subgraph "Unified Resources"
         PROFILE[mcp://twins/member/{id}/profile]
         COVERAGE_RES[mcp://twins/member/{id}/coverage]
@@ -161,7 +161,7 @@ graph TB
         CARE_RES[mcp://twins/member/{id}/care/summary]
         VIRTUAL_RES[mcp://twins/member/{id}/virtual-care]
     end
-    
+
     subgraph "Backend Services"
         CAREFLOW[CareFlow]
         RTE[RTE]
@@ -169,29 +169,29 @@ graph TB
         CLAIMS_API[Claims API]
         VIRTUAL_API[Virtual Care API]
     end
-    
+
     LLM --> MCP_CLIENT
     MCP_CLIENT --> SEARCH
     MCP_CLIENT --> READ
     MCP_CLIENT --> CHAT
-    
+
     SEARCH --> PROFILE
     SEARCH --> COVERAGE_RES
     SEARCH --> PROVIDER_RES
     SEARCH --> CLAIMS_RES
     SEARCH --> CARE_RES
     SEARCH --> VIRTUAL_RES
-    
+
     READ --> PROFILE
     READ --> COVERAGE_RES
     READ --> PROVIDER_RES
     READ --> CLAIMS_RES
     READ --> CARE_RES
     READ --> VIRTUAL_RES
-    
+
     CHAT --> CAREFLOW
     CHAT --> RTE
-    
+
     PROFILE --> CAREFLOW
     COVERAGE_RES --> RTE
     PROVIDER_RES --> PROVIDER_API
@@ -220,13 +220,13 @@ tools:
     examples:
       - "Where can I see authorizations on the app?"
       - "What's covered under my plan?"
-      
+
   - name: OE_coverage_tool
     description: Answer open enrollment coverage questions
     examples:
       - "Is this plan available in my area?"
       - "What's the difference between plans?"
-      
+
   - name: check_eligibility
     description: Check member eligibility status
     examples:
@@ -244,10 +244,10 @@ tools:
   - memberTwin.search:
       query: "coverage eligibility authorizations"
       memberId: "{id}"
-      
+
   - memberTwin.readDocument:
       uri: "mcp://twins/member/{id}/coverage"
-      
+
   - memberTwin.chat:
       message: "Where can I see my authorizations?"
       intents: [{name: "coverage.authorizations"}]
@@ -271,12 +271,12 @@ tools:
       - specialty
       - location
       - insurance
-      
+
   - name: get_provider_details
     description: Get detailed provider information
     parameters:
       - provider_id
-      
+
   - name: check_network
     description: Check if provider is in network
     parameters:
@@ -294,11 +294,11 @@ tools:
   - memberTwin.search:
       query: "cardiologist in network near me"
       memberId: "{id}"
-      
+
   - memberTwin.readDocument:
       uri: "mcp://twins/member/{id}/providers"
       # Returns: network providers, favorites, recent visits
-      
+
   - memberTwin.chat:
       message: "Is Dr. Smith in my network?"
       intents: [{name: "provider.network_check"}]
@@ -321,12 +321,12 @@ tools:
     parameters:
       - claim_id (optional)
       - date_range (optional)
-      
+
   - name: get_billing_info
     description: Get billing statements and balances
     parameters:
       - statement_id (optional)
-      
+
   - name: route_billing_questions
     description: Route billing inquiries to care team
     parameters:
@@ -343,11 +343,11 @@ tools:
   - memberTwin.search:
       query: "recent claims status"
       memberId: "{id}"
-      
+
   - memberTwin.readDocument:
       uri: "mcp://twins/member/{id}/financial"
       # Returns: claims, billing, statements
-      
+
   - memberTwin.chat:
       message: "What's the status of my claim from last month?"
       intents: [{name: "claims.status"}]
@@ -371,12 +371,12 @@ tools:
     parameters:
       - question_text
       - provider_id
-      
+
   - name: get_prescription_info
     description: Get prescription details
     parameters:
       - prescription_id
-      
+
   - name: schedule_virtual_visit
     description: Schedule a virtual care appointment
     parameters:
@@ -394,11 +394,11 @@ tools:
   - memberTwin.search:
       query: "virtual care prescriptions"
       memberId: "{id}"
-      
+
   - memberTwin.readDocument:
       uri: "mcp://twins/member/{id}/virtual-care"
       # Returns: active prescriptions, upcoming visits, providers
-      
+
   - memberTwin.chat:
       message: "I have a question about my prescription"
       intents: [
@@ -426,7 +426,7 @@ tools:
       - reason
       - urgency
       - member_context
-      
+
   - name: get_support_info
     description: Get support contact information
     parameters:
@@ -442,7 +442,7 @@ tools:
   - memberTwin.readDocument:
       uri: "mcp://twins/member/{id}/care/summary"
       # Returns: care team, support contacts, active care plans
-      
+
   - memberTwin.chat:
       message: "I need to speak with my care coordinator"
       intents: [{name: "care_team.routing", urgency: "normal"}]
@@ -551,10 +551,10 @@ type MemberTwinResourceHandler struct {
 func (h *MemberTwinResourceHandler) ReadDocument(ctx context.Context, uri string) {
     // Parse URI to determine resource type
     resourceType := parseResourceType(uri)
-    
+
     // Get unified resource provider
     provider := h.resources[resourceType]
-    
+
     // Standard access pattern
     return provider.Get(ctx, uri)
 }
@@ -794,10 +794,10 @@ parameters:
 func (s *MemberTwin) Search(query, memberID string) {
     // 1. Search coverage resource
     resource := s.getResource("mcp://twins/member/M123/coverage")
-    
+
     // 2. Unified search across all coverage data
     results := resource.Search(query)
-    
+
     // 3. Return standard MCP format
     return results
 }
@@ -843,18 +843,18 @@ func (s *MemberTwin) Search(query, memberID string) {
 
 ### Must Achieve
 
-✅ **100% tool migration** - All tools replaced by Digital Twin  
-✅ **Zero regressions** - Functionality maintained  
-✅ **Performance parity** - Latency ≤ existing tools  
-✅ **80% code reduction** - Significant simplification  
-✅ **Single integration point** - Digital Twin MCP only  
+✅ **100% tool migration** - All tools replaced by Digital Twin
+✅ **Zero regressions** - Functionality maintained
+✅ **Performance parity** - Latency ≤ existing tools
+✅ **80% code reduction** - Significant simplification
+✅ **Single integration point** - Digital Twin MCP only
 
 ### Nice to Have
 
-🎯 **Better performance** - Faster responses via caching  
-🎯 **New capabilities** - Chat tool enables new use cases  
-🎯 **Improved accuracy** - Unified data model reduces inconsistencies  
-🎯 **Easier maintenance** - Single codebase vs 100+ tools  
+🎯 **Better performance** - Faster responses via caching
+🎯 **New capabilities** - Chat tool enables new use cases
+🎯 **Improved accuracy** - Unified data model reduces inconsistencies
+🎯 **Easier maintenance** - Single codebase vs 100+ tools
 
 ---
 

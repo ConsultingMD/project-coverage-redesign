@@ -31,15 +31,15 @@ graph TB
         ENGAGEMENT[Engagement Data<br/>App, Calls, Messages]
         BIO[Biometric Data<br/>HealthKit, Wearables]
         MEMBER[Member-Reported<br/>Surveys, Symptoms]
-        
+
         DT[Digital Twin<br/>Unified Member Model]
-        
+
         CLINICAL --> DT
         ENGAGEMENT --> DT
         BIO --> DT
         MEMBER --> DT
     end
-    
+
     subgraph "ML & Prediction Engines"
         APP_PRED[App Usage Predictor]
         HEALTH_RISK[Health Risk Scorer]
@@ -47,7 +47,7 @@ graph TB
         SLEEP[Sleep Scorer]
         GAPS[Care Gap Detector]
         TRENDS[Health Trends Analyzer]
-        
+
         DT --> APP_PRED
         DT --> HEALTH_RISK
         DT --> CHURN
@@ -55,43 +55,43 @@ graph TB
         DT --> GAPS
         DT --> TRENDS
     end
-    
+
     subgraph "Event Infrastructure"
         KAFKA[Kafka Event Stream<br/>digital-twin.prediction.*]
     end
-    
+
     APP_PRED --> KAFKA
     HEALTH_RISK --> KAFKA
     CHURN --> KAFKA
     SLEEP --> KAFKA
     GAPS --> KAFKA
     TRENDS --> KAFKA
-    
+
     subgraph "DECIDE: The Brain"
         NBA[Next Best Action<br/>Recommendations]
     end
-    
+
     subgraph "ACT: CareFlow"
         SR[Service Requests]
         TASKS[Tasks]
     end
-    
+
     KAFKA --> NBA
     NBA --> SR
     SR --> TASKS
-    
+
     subgraph "Consumers (Examples)"
         RTE_CACHE[RTE Cache Warmer]
         FRONTEND[Frontend Real-Time UI]
         CC_COPILOT[Clinical Copilot]
         OUTREACH[ATC Outreach]
     end
-    
+
     KAFKA --> RTE_CACHE
     KAFKA --> FRONTEND
     KAFKA --> CC_COPILOT
     KAFKA --> OUTREACH
-    
+
     style DT fill:#e1f5ff
     style KAFKA fill:#e1ffe1
     style NBA fill:#ffe1e1
@@ -554,7 +554,7 @@ func (s *MemberCronService) RunCronCycle(ctx context.Context) error {
     if err != nil {
         return err
     }
-    
+
     // 2. For each member, run predictions
     for _, member := range members {
         // Query Digital Twin for latest signals
@@ -562,13 +562,13 @@ func (s *MemberCronService) RunCronCycle(ctx context.Context) error {
         if err != nil {
             continue
         }
-        
+
         // 3. Run ML predictions
         predictions, err := s.mlAPI.PredictAll(ctx, signals)
         if err != nil {
             continue
         }
-        
+
         // 4. Evaluate thresholds and emit events
         for _, pred := range predictions {
             if pred.ExceedsThreshold() {
@@ -577,7 +577,7 @@ func (s *MemberCronService) RunCronCycle(ctx context.Context) error {
             }
         }
     }
-    
+
     return nil
 }
 ```

@@ -109,24 +109,24 @@ graph LR
         T3[get_claims_status]
         T4[...97 more tools]
     end
-    
+
     subgraph "After: 3 Universal Tools"
         SEARCH[memberTwin.search]
         READ[memberTwin.readDocument]
         CHAT[memberTwin.chat]
     end
-    
+
     subgraph "Unified Resources"
         R1[mcp://twins/member/{id}/profile]
         R2[mcp://twins/member/{id}/coverage]
         R3[mcp://twins/member/{id}/care]
     end
-    
+
     T1 --> SEARCH
     T2 --> SEARCH
     T3 --> READ
     T4 --> CHAT
-    
+
     SEARCH --> R1
     READ --> R2
     CHAT --> R3
