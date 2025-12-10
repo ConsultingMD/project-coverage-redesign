@@ -65,7 +65,7 @@ When implementing a fix for a JIRA issue (e.g., from triage documents):
 
 1. **Navigate to the correct repository:**
    - Most fixes will be in one of the workspace repositories (e.g., `member-sponsorship`, `coverage`, etc.)
-   - Use absolute paths when working with files: `/Users/tj.singleton/src/github.com/ConsultingMD/repo-name/...`
+   - Use absolute paths when working with files: `$IH_HOME/repo-name/...` (or `~/src/github.com/ConsultingMD/repo-name/...` if `IH_HOME` is not set)
 
 2. **Create a branch:**
    - Try `tng jira start` first (may require AWS environment setup)
@@ -91,7 +91,7 @@ When implementing a fix for a JIRA issue (e.g., from triage documents):
    - What was wrong
    - How it was fixed
    - What test coverage was added
-   
+
    Fixes: ACT-XXXX"
    ```
    - If pre-commit hooks fail due to unrelated issues, use `--no-verify` flag

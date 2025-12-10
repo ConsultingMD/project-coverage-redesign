@@ -26,19 +26,19 @@ graph TB
         ROUTER[Tool Router]
         TOOLS[Tool Registry]
     end
-    
+
     subgraph "Digital Twin MCP"
         MCP_SERVER[MemberTwin MCP Server]
         RESOURCES[Member Resources]
         CHAT[Chat Tool]
     end
-    
+
     subgraph "Backend Services"
         CAREFLOW[CareFlow]
         RTE[RTE]
         BRAIN[The Brain]
     end
-    
+
     LLM --> ROUTER
     ROUTER --> TOOLS
     TOOLS -->|MCP Protocol| MCP_SERVER
@@ -69,12 +69,12 @@ graph TB
 
 ### What We're NOT Building
 
-❌ Full resource catalog (only 3-5 resources)  
-❌ Production authorization (mock Authzilla)  
-❌ Real Authzed integration (hardcoded permissions)  
-❌ Event-driven infrastructure (direct DB reads)  
-❌ WebSocket gateway (not needed for POC)  
-❌ Production deployment (local dev only)  
+❌ Full resource catalog (only 3-5 resources)
+❌ Production authorization (mock Authzilla)
+❌ Real Authzed integration (hardcoded permissions)
+❌ Event-driven infrastructure (direct DB reads)
+❌ WebSocket gateway (not needed for POC)
+❌ Production deployment (local dev only)
 
 ---
 
@@ -113,11 +113,11 @@ resources:
   - uri: mcp://twins/member/{id}/profile
     name: Member Profile
     description: Basic demographics and contact info
-    
+
   - uri: mcp://twins/member/{id}/coverage
     name: Coverage Summary
     description: Current insurance coverage and benefits
-    
+
   - uri: mcp://twins/member/{id}/care-summary
     name: Care Summary
     description: Active care plans and tasks
@@ -134,7 +134,7 @@ tools:
       properties:
         query: { type: string }
         memberId: { type: string }
-        
+
   - name: memberTwin.readDocument
     description: Read a specific member resource
     inputSchema:
@@ -224,12 +224,12 @@ import "github.com/modelcontextprotocol/go-sdk/server"
 
 func main() {
     srv := server.NewMCPServer()
-    
+
     srv.AddTool("memberTwin_search", handleSearch)
     srv.AddTool("memberTwin_readDocument", handleReadDocument)
-    
+
     srv.AddResource("mcp://twins/member/{id}/profile", getProfile)
-    
+
     srv.Serve(":8080")
 }
 ```
@@ -270,13 +270,13 @@ func NewMCPServer() *MCPServer {
     s := &MCPServer{
         router: mux.NewRouter(),
     }
-    
+
     // MCP protocol endpoints
     s.router.HandleFunc("/mcp/v1/tools/list", s.handleToolsList)
     s.router.HandleFunc("/mcp/v1/tools/call", s.handleToolCall)
     s.router.HandleFunc("/mcp/v1/resources/list", s.handleResourcesList)
     s.router.HandleFunc("/mcp/v1/resources/read", s.handleResourceRead)
-    
+
     return s
 }
 
@@ -285,9 +285,9 @@ func (s *MCPServer) handleToolCall(w http.ResponseWriter, r *http.Request) {
         Name      string                 `json:"name"`
         Arguments map[string]interface{} `json:"arguments"`
     }
-    
+
     json.NewDecoder(r.Body).Decode(&req)
-    
+
     // Route to tool handler
     switch req.Name {
     case "memberTwin_search":
@@ -315,7 +315,7 @@ func (h *MemberHandler) GetProfile(memberID string) (*Profile, error) {
         FROM members
         WHERE id = $1
     `, memberID)
-    
+
     var p Profile
     err := row.Scan(&p.ID, &p.FirstName, &p.LastName, &p.Email, &p.Phone)
     return &p, err
@@ -328,7 +328,7 @@ func (h *MemberHandler) GetProfile(memberID string) (*Profile, error) {
 
 ### Option 1: Claude Desktop (Recommended)
 
-**Why**: 
+**Why**:
 - ✅ Already supports MCP
 - ✅ Real-world agent experience
 - ✅ Easy to configure
@@ -375,16 +375,16 @@ func TestMCPServer(t *testing.T) {
     // Start server
     go main()
     time.Sleep(100 * time.Millisecond)
-    
+
     // Test tools/list
     resp, _ := http.Get("http://localhost:8080/mcp/v1/tools/list")
     var tools struct {
         Tools []Tool `json:"tools"`
     }
     json.NewDecoder(resp.Body).Decode(&tools)
-    
+
     assert.Len(t, tools.Tools, 2)
-    assert.Equal(t, "memberTwin_search", tools.Tools[0].Name)
+    assert.Equal(t, "memberTwin.search", tools.Tools[0].Name)
 }
 ```
 
@@ -410,7 +410,7 @@ async def test_member_twin():
         # List tools
         tools = await session.list_tools()
         print(f"Available tools: {[t.name for t in tools.tools]}")
-        
+
         # Call search tool
         result = await session.call_tool(
             "memberTwin.search",
@@ -484,18 +484,18 @@ async def test_member_twin():
 
 ### Must Have (POC Validated)
 
-✅ Agent Platform discovers MemberTwin MCP server  
-✅ LLM can call `memberTwin.search` tool  
-✅ LLM can call `memberTwin.readDocument` tool  
-✅ Resources return real member data  
-✅ End-to-end latency < 500ms  
+✅ Agent Platform discovers MemberTwin MCP server
+✅ LLM can call `memberTwin.search` tool
+✅ LLM can call `memberTwin.readDocument` tool
+✅ Resources return real member data
+✅ End-to-end latency < 500ms
 
 ### Nice to Have
 
-🎯 Chat tool implemented  
-🎯 Resource sampling working  
-🎯 Multiple members supported  
-🎯 Error handling robust  
+🎯 Chat tool implemented
+🎯 Resource sampling working
+🎯 Multiple members supported
+🎯 Error handling robust
 
 ---
 
@@ -511,7 +511,8 @@ import (
     "log"
     "net/http"
     "os"
-    
+    "strings"
+
     "github.com/gorilla/mux"
     _ "github.com/lib/pq"
 )
@@ -536,15 +537,15 @@ func main() {
     if err != nil {
         log.Fatal(err)
     }
-    
+
     server := &MCPServer{db: db}
-    
+
     r := mux.NewRouter()
     r.HandleFunc("/mcp/v1/tools/list", server.handleToolsList)
     r.HandleFunc("/mcp/v1/tools/call", server.handleToolCall)
     r.HandleFunc("/mcp/v1/resources/list", server.handleResourcesList)
     r.HandleFunc("/mcp/v1/resources/read", server.handleResourceRead)
-    
+
     log.Println("MCP Server starting on :8080")
     log.Fatal(http.ListenAndServe(":8080", r))
 }
@@ -573,7 +574,7 @@ func (s *MCPServer) handleToolsList(w http.ResponseWriter, r *http.Request) {
             },
         },
     }
-    
+
     json.NewEncoder(w).Encode(map[string]interface{}{"tools": tools})
 }
 
@@ -583,25 +584,25 @@ func (s *MCPServer) handleToolCall(w http.ResponseWriter, r *http.Request) {
         Arguments map[string]interface{} `json:"arguments"`
     }
     json.NewDecoder(r.Body).Decode(&req)
-    
+
     switch req.Name {
     case "memberTwin.search":
         query := req.Arguments["query"].(string)
         memberID := req.Arguments["memberId"].(string)
-        
+
         // Simple search (POC only)
         results := s.searchResources(memberID, query)
-        
+
         json.NewEncoder(w).Encode(map[string]interface{}{
             "content": []Content{
                 {Type: "text", Text: fmt.Sprintf("Found %d resources", len(results))},
             },
         })
-        
+
     case "memberTwin.readDocument":
         uri := req.Arguments["uri"].(string)
         content := s.readResource(uri)
-        
+
         json.NewEncoder(w).Encode(map[string]interface{}{
             "content": []Content{
                 {Type: "text", Text: content},
@@ -618,7 +619,7 @@ func (s *MCPServer) searchResources(memberID, query string) []string {
         fmt.Sprintf("mcp://twins/member/%s/coverage", memberID),
         fmt.Sprintf("mcp://twins/member/%s/care-summary", memberID),
     }
-    
+
     // Filter by query (simple string matching for POC)
     var results []string
     for _, r := range resources {
@@ -634,13 +635,13 @@ func (s *MCPServer) readResource(uri string) string {
     // Extract member ID and resource type
     // Query database
     // Return JSON
-    
+
     // POC implementation
     return `{"id": "M123", "name": "John Doe", "email": "john@example.com"}`
 }
 
 func contains(s, substr string) bool {
-    return len(s) >= len(substr) && (s == substr || len(substr) == 0)
+    return strings.Contains(s, substr)
 }
 
 ---
