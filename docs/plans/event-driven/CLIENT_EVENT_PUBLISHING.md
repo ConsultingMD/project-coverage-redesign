@@ -33,36 +33,36 @@ graph LR
         QUEUE[Durable Queue<br/>IndexedDB/SQLite]
         PUB[Publisher]
     end
-    
+
     subgraph "WebSocket Gateway"
         WS[WebSocket Handler]
         AUTH[Authorization]
         INGEST[Event Ingester]
         DEDUP[Deduplicator]
     end
-    
+
     subgraph "Backend"
         KAFKA[Kafka Topics]
         PROC[Event Processors]
         STORE[Event Store]
     end
-    
+
     APP -->|User Action| EVT
     EVT -->|Emit| QUEUE
     QUEUE -->|Publish| PUB
     PUB -->|WebSocket| WS
-    
+
     WS -->|Validate| AUTH
     AUTH -->|Authorized| INGEST
     INGEST -->|Check| DEDUP
     DEDUP -->|Unique| KAFKA
-    
+
     KAFKA -->|Process| PROC
     KAFKA -->|Archive| STORE
-    
+
     WS -->|Ack| PUB
     PUB -->|Mark Delivered| QUEUE
-    
+
     style QUEUE fill:#ffe1e1
     style DEDUP fill:#e1f5ff
     style KAFKA fill:#e1ffe1
@@ -148,7 +148,7 @@ interface ClientEvent {
   id: string;                    // UUID (client-generated, for idempotency)
   type: string;                  // "member.action.clicked" | "care.task.completed"
   timestamp: string;             // ISO 8601 (client timestamp)
-  
+
   // Client context
   client: {
     session_id: string;          // Client session identifier
@@ -156,16 +156,16 @@ interface ClientEvent {
     app_version: string;         // "MX-iOS/1.2.3"
     platform: 'ios' | 'android' | 'web' | 'care-web';
   };
-  
+
   // User context
   actor: {
     type: 'member' | 'care_coordinator' | 'anonymous';
     id?: string;                 // Member ID or care coordinator ID
   };
-  
+
   // Event payload
   data: Record<string, any>;     // Event-specific data
-  
+
   // Metadata
   metadata?: {
     correlation_id?: string;     // Link to parent event/workflow
@@ -185,7 +185,7 @@ export class EventPublisher {
   private ws: WebSocket;
   private publishInterval: NodeJS.Timer;
   private pendingAcks: Map<string, PendingEvent>;
-  
+
   constructor(config: PublisherConfig) {
     // Durable queue (IndexedDB for web, SQLite for mobile)
     this.queue = new DurableQueue({
@@ -193,17 +193,17 @@ export class EventPublisher {
       maxSize: 10000,  // Keep up to 10k events
       maxAge: 7 * 24 * 60 * 60 * 1000,  // Keep events for 7 days
     });
-    
+
     // WebSocket connection
     this.ws = new WebSocket(config.websocketUrl, {
       headers: { 'Authorization': `Bearer ${config.token}` }
     });
-    
+
     this.pendingAcks = new Map();
     this.setupHandlers();
     this.startPublisher();
   }
-  
+
   /**
    * Publish an event (async, non-blocking)
    * Events are queued locally and sent asynchronously
@@ -215,34 +215,34 @@ export class EventPublisher {
       client: this.getClientContext(),
       ...event,
     };
-    
+
     // Add to durable queue (survives app restart)
     await this.queue.enqueue(fullEvent);
-    
+
     // Try to publish immediately if online
     if (this.ws.readyState === WebSocket.OPEN) {
       this.publishBatch();
     }
   }
-  
+
   /**
    * Publish a batch of events from the queue
    */
   private async publishBatch(): Promise<void> {
     // Get up to 100 events from queue
     const events = await this.queue.peek(100);
-    
+
     if (events.length === 0) return;
-    
+
     // Send batch via WebSocket
     const batchMessage = {
       type: 'publish_batch',
       events: events.map(e => e.data),
     };
-    
+
     try {
       this.ws.send(JSON.stringify(batchMessage));
-      
+
       // Track pending acks (timeout after 30 seconds)
       events.forEach(event => {
         this.pendingAcks.set(event.data.id, {
@@ -253,31 +253,31 @@ export class EventPublisher {
           }, 30000),
         });
       });
-      
+
     } catch (err) {
       console.error('Failed to publish batch', err);
       // Events remain in queue, will retry
     }
   }
-  
+
   /**
    * Handle acknowledgment from server
    */
   private handleAck(ack: AckMessage): void {
     const pending = this.pendingAcks.get(ack.event_id);
-    
+
     if (!pending) {
       console.warn('Received ack for unknown event', ack.event_id);
       return;
     }
-    
+
     // Clear timeout
     clearTimeout(pending.timeout);
     this.pendingAcks.delete(ack.event_id);
-    
+
     // Remove from queue (durably delivered!)
     this.queue.remove(ack.event_id);
-    
+
     // Emit success event
     this.emit('published', {
       eventId: ack.event_id,
@@ -285,36 +285,36 @@ export class EventPublisher {
       serverTimestamp: ack.server_timestamp,
     });
   }
-  
+
   /**
    * Handle ack timeout (no response from server)
    */
   private handleAckTimeout(eventId: string): void {
     const pending = this.pendingAcks.get(eventId);
-    
+
     if (!pending) return;
-    
+
     this.pendingAcks.delete(eventId);
-    
+
     // Event remains in queue, will retry
     console.warn('Ack timeout for event', eventId, 'will retry');
-    
+
     // Exponential backoff
     this.scheduleRetry(pending.event);
   }
-  
+
   /**
    * Retry with exponential backoff
    */
   private scheduleRetry(event: ClientEvent): void {
     const retryCount = this.getRetryCount(event.id);
     const backoffMs = Math.min(1000 * Math.pow(2, retryCount), 60000);  // Max 60s
-    
+
     setTimeout(() => {
       this.publishBatch();
     }, backoffMs);
   }
-  
+
   /**
    * Start background publisher (publishes queued events)
    */
@@ -326,7 +326,7 @@ export class EventPublisher {
       }
     }, 5000);
   }
-  
+
   /**
    * Setup WebSocket handlers
    */
@@ -335,23 +335,23 @@ export class EventPublisher {
       console.log('WebSocket connected, publishing queued events');
       this.publishBatch();
     });
-    
+
     this.ws.on('message', (message) => {
       const msg = JSON.parse(message);
-      
+
       if (msg.type === 'ack') {
         this.handleAck(msg);
       } else if (msg.type === 'ack_batch') {
         msg.event_ids.forEach(id => this.handleAck({ event_id: id }));
       }
     });
-    
+
     this.ws.on('close', () => {
       console.warn('WebSocket closed, events queued for later');
       // Events remain in queue, will retry when reconnected
     });
   }
-  
+
   /**
    * Get client context (device, app version, etc.)
    */
@@ -363,26 +363,26 @@ export class EventPublisher {
       platform: this.config.platform,
     };
   }
-  
+
   /**
    * Generate event ID (UUID v4)
    */
   private generateEventId(): string {
     return crypto.randomUUID();
   }
-  
+
   /**
    * Get device ID (persistent across sessions)
    */
   private getDeviceId(): string {
     // Stored in localStorage (web) or keychain (mobile)
     let deviceId = localStorage.getItem('device_id');
-    
+
     if (!deviceId) {
       deviceId = this.generateEventId();
       localStorage.setItem('device_id', deviceId);
     }
-    
+
     return deviceId;
   }
 }
@@ -395,39 +395,39 @@ export class EventPublisher {
 
 export class DurableQueue {
   private db: IDBDatabase;
-  
+
   constructor(config: QueueConfig) {
     this.db = this.openDatabase(config.name);
   }
-  
+
   /**
    * Open IndexedDB (survives browser restart)
    */
   private async openDatabase(name: string): Promise<IDBDatabase> {
     return new Promise((resolve, reject) => {
       const request = indexedDB.open(name, 1);
-      
+
       request.onupgradeneeded = (event) => {
         const db = (event.target as IDBOpenDBRequest).result;
-        
+
         // Create object store for events
         const store = db.createObjectStore('events', { keyPath: 'id' });
         store.createIndex('timestamp', 'timestamp');
         store.createIndex('retryCount', 'retryCount');
       };
-      
+
       request.onsuccess = () => resolve(request.result);
       request.onerror = () => reject(request.error);
     });
   }
-  
+
   /**
    * Add event to queue
    */
   async enqueue(event: ClientEvent): Promise<void> {
     const tx = this.db.transaction('events', 'readwrite');
     const store = tx.objectStore('events');
-    
+
     await store.add({
       id: event.id,
       data: event,
@@ -435,7 +435,7 @@ export class DurableQueue {
       retryCount: 0,
     });
   }
-  
+
   /**
    * Get next N events from queue (oldest first)
    */
@@ -443,10 +443,10 @@ export class DurableQueue {
     const tx = this.db.transaction('events', 'readonly');
     const store = tx.objectStore('events');
     const index = store.index('timestamp');
-    
+
     const events: Array<{ id: string; data: ClientEvent }> = [];
     const cursor = await index.openCursor();
-    
+
     while (cursor && events.length < count) {
       events.push({
         id: cursor.value.id,
@@ -454,10 +454,10 @@ export class DurableQueue {
       });
       await cursor.continue();
     }
-    
+
     return events;
   }
-  
+
   /**
    * Remove event from queue (after ack)
    */
@@ -466,7 +466,7 @@ export class DurableQueue {
     const store = tx.objectStore('events');
     await store.delete(eventId);
   }
-  
+
   /**
    * Get queue size
    */
@@ -475,7 +475,7 @@ export class DurableQueue {
     const store = tx.objectStore('events');
     return await store.count();
   }
-  
+
   /**
    * Clear old events (garbage collection)
    */
@@ -484,9 +484,9 @@ export class DurableQueue {
     const tx = this.db.transaction('events', 'readwrite');
     const store = tx.objectStore('events');
     const index = store.index('timestamp');
-    
+
     const cursor = await index.openCursor(IDBKeyRange.upperBound(cutoff));
-    
+
     while (cursor) {
       await cursor.delete();
       await cursor.continue();
@@ -509,7 +509,7 @@ import (
     "context"
     "encoding/json"
     "time"
-    
+
     "github.com/google/uuid"
 )
 
@@ -531,39 +531,39 @@ func (h *PublishHandler) HandlePublish(
     if !allowed {
         return h.sendError(conn, "Rate limit exceeded", message.Events[0].ID)
     }
-    
+
     acks := []string{}
-    
+
     for _, event := range message.Events {
         // 2. Validate event schema
         if err := h.validateEvent(event); err != nil {
             log.Error("Invalid event schema", zap.Error(err), zap.String("eventId", event.ID))
             continue  // Skip invalid event, don't ack
         }
-        
+
         // 3. Authorization check
         authorized, err := h.authorizePublish(conn.Identity, event)
         if err != nil || !authorized {
             h.auditLog.LogDenied(conn.Identity.Sub, "publish", event.Type, "Not authorized")
             continue  // Skip unauthorized event, don't ack
         }
-        
+
         // 4. Deduplication check
         isDuplicate, err := h.checkDuplicate(event.ID)
         if err != nil {
             log.Error("Dedup check failed", zap.Error(err))
             continue
         }
-        
+
         if isDuplicate {
             log.Info("Duplicate event, skipping", zap.String("eventId", event.ID))
             acks = append(acks, event.ID)  // Ack duplicate (already processed)
             continue
         }
-        
+
         // 5. Enrich event with server-side metadata
         enrichedEvent := h.enrichEvent(event, conn)
-        
+
         // 6. Publish to Kafka
         partition := h.getPartition(event)
         err = h.kafka.Publish(ctx, &kafka.Message{
@@ -572,27 +572,27 @@ func (h *PublishHandler) HandlePublish(
             Value:     enrichedEvent,
             Partition: partition,
         })
-        
+
         if err != nil {
             log.Error("Failed to publish to Kafka", zap.Error(err))
             continue  // Don't ack if Kafka publish fails
         }
-        
+
         // 7. Mark as processed (dedup)
         h.markProcessed(event.ID)
-        
+
         // 8. Log successful ingestion
         h.auditLog.LogEventIngested(conn.Identity.Sub, event.Type, event.ID)
-        
+
         // 9. Add to ack list
         acks = append(acks, event.ID)
     }
-    
+
     // 10. Send batch acknowledgment
     if len(acks) > 0 {
         return h.sendBatchAck(conn, acks)
     }
-    
+
     return nil
 }
 
@@ -607,23 +607,23 @@ func (h *PublishHandler) validateEvent(event *ClientEvent) error {
     if event.Timestamp == "" {
         return fmt.Errorf("missing timestamp")
     }
-    
+
     // Validate timestamp is recent (within 24 hours)
     timestamp, err := time.Parse(time.RFC3339, event.Timestamp)
     if err != nil {
         return fmt.Errorf("invalid timestamp format")
     }
-    
+
     age := time.Since(timestamp)
     if age > 24*time.Hour {
         return fmt.Errorf("event too old: %v", age)
     }
-    
+
     // Validate event type format
     if !isValidEventType(event.Type) {
         return fmt.Errorf("invalid event type: %s", event.Type)
     }
-    
+
     return nil
 }
 
@@ -632,27 +632,27 @@ func (h *PublishHandler) authorizePublish(
     event *ClientEvent,
 ) (bool, error) {
     // Check if user can publish this event type
-    
+
     // Members can only publish events for themselves
     if identity.Type == "member" {
         if event.Actor.Type != "member" || event.Actor.ID != identity.MemberID {
             return false, nil
         }
-        
+
         // Members can only publish certain event types
         allowedTypes := []string{
             "member.action.*",
             "member.navigation.*",
             "member.feature_usage.*",
         }
-        
+
         if !matchesAnyPattern(event.Type, allowedTypes) {
             return false, nil
         }
-        
+
         return true, nil
     }
-    
+
     // Care coordinators can publish care team events
     if identity.Type == "care_coordinator" {
         // Check if care coordinator has relationship with member
@@ -670,37 +670,37 @@ func (h *PublishHandler) authorizePublish(
                     },
                 },
             })
-            
+
             return authorized, err
         }
-        
+
         return true, nil
     }
-    
+
     // Backend services can publish anything
     if identity.Type == "service" {
         return true, nil
     }
-    
+
     return false, nil
 }
 
 func (h *PublishHandler) checkDuplicate(eventID string) (bool, error) {
     // Check if event ID exists in Redis (sliding window: 24 hours)
     key := fmt.Sprintf("event:processed:%s", eventID)
-    
+
     exists, err := h.redis.Exists(context.Background(), key).Result()
     if err != nil {
         return false, err
     }
-    
+
     return exists == 1, nil
 }
 
 func (h *PublishHandler) markProcessed(eventID string) error {
     // Mark event as processed in Redis (expires after 24 hours)
     key := fmt.Sprintf("event:processed:%s", eventID)
-    
+
     return h.redis.Set(context.Background(), key, "1", 24*time.Hour).Err()
 }
 
@@ -725,25 +725,25 @@ func (h *PublishHandler) sendBatchAck(conn *Connection, eventIDs []string) error
         EventIDs:        eventIDs,
         ServerTimestamp: time.Now().Format(time.RFC3339),
     }
-    
+
     return conn.Send(ack)
 }
 
 func (h *PublishHandler) getTopicForEventType(eventType string) string {
     // Route events to appropriate Kafka topics
-    
+
     if strings.HasPrefix(eventType, "member.action") {
         return "client-events.member-actions"
     }
-    
+
     if strings.HasPrefix(eventType, "member.navigation") {
         return "client-events.navigation"
     }
-    
+
     if strings.HasPrefix(eventType, "care.task") {
         return "client-events.care-tasks"
     }
-    
+
     // Default topic
     return "client-events.general"
 }
@@ -800,7 +800,7 @@ kafka.consume('client-events.member-actions', async (event) => {
     event: event.type,
     properties: event.data,
   });
-  
+
   // Trigger ML feature usage model
   await ml.updateFeatureUsageModel(event);
 });
@@ -855,7 +855,7 @@ kafka.Consume("client-events.care-tasks", func(event *ClientEvent) {
         Status:      event.Data.CompletionStatus,
         Notes:       event.Data.Notes,
     })
-    
+
     // Publish domain event (for subscribers)
     kafka.Publish("domain-events.care-task-completed", &TaskCompletedEvent{
         TaskID:      event.Data.TaskID,
@@ -863,7 +863,7 @@ kafka.Consume("client-events.care-tasks", func(event *ClientEvent) {
         CompletedBy: event.Actor.ID,
         CompletedAt: time.Now(),
     })
-    
+
     // Trigger next actions
     for _, action := range event.Data.NextActions {
         workflowEngine.TriggerAction(action, event.Data.MemberID)
@@ -965,19 +965,19 @@ kafka.Consume("client-events.care-tasks", func(event *ClientEvent) {
 ```go
 func (h *PublishHandler) checkDuplicate(eventID string) (bool, error) {
     key := fmt.Sprintf("event:processed:%s", eventID)
-    
+
     // Check if exists
     exists, err := h.redis.Exists(context.Background(), key).Result()
     if err != nil {
         return false, err
     }
-    
+
     if exists == 1 {
         // Duplicate detected, but still ack to client
         log.Info("Duplicate event detected", zap.String("eventId", eventID))
         return true, nil
     }
-    
+
     // Not a duplicate, mark as processing
     h.redis.Set(context.Background(), key, "1", 24*time.Hour)
     return false, nil
@@ -1000,11 +1000,11 @@ func (h *PublishHandler) checkDuplicate(eventID string) (bool, error) {
 func (h *PublishHandler) getPartition(event *ClientEvent) int32 {
     // Partition by actor ID (member or care coordinator)
     // Events from same actor go to same partition → ordered processing
-    
+
     key := event.Actor.ID
     hash := fnv.New32a()
     hash.Write([]byte(key))
-    
+
     return int32(hash.Sum32() % uint32(h.kafka.NumPartitions))
 }
 ```
@@ -1027,13 +1027,13 @@ func (h *PublishHandler) checkBackpressure() bool {
     if kafkaLag > 10000 {
         return true  // Too much lag, apply backpressure
     }
-    
+
     // Check pending acks
     pendingAcks := h.getPendingAckCount()
     if pendingAcks > 1000 {
         return true  // Too many unacked events
     }
-    
+
     return false
 }
 
@@ -1045,7 +1045,7 @@ func (h *PublishHandler) HandlePublish(conn *Connection, msg *PublishMessage) er
             RetryAfterMs: 5000,  // Client should wait 5 seconds
         })
     }
-    
+
     // Process events...
 }
 ```
@@ -1078,14 +1078,14 @@ class EventPublisher {
         console.warn('WebSocket publish failed, falling back to HTTP', err);
       }
     }
-    
+
     // Fallback to HTTP POST
     await this.publishViaHTTP();
   }
-  
+
   private async publishViaHTTP(): Promise<void> {
     const events = await this.queue.peek(100);
-    
+
     const response = await fetch('https://events.includedhealth.com/v1/publish', {
       method: 'POST',
       headers: {
@@ -1096,13 +1096,13 @@ class EventPublisher {
         events: events.map(e => e.data),
       }),
     });
-    
+
     if (!response.ok) {
       throw new Error('HTTP publish failed');
     }
-    
+
     const result = await response.json();
-    
+
     // Handle acks
     result.acks.forEach(eventId => {
       this.queue.remove(eventId);
@@ -1171,20 +1171,20 @@ func (rl *RateLimiter) GetLimit(actorType string) *rate.Limit {
         "care_coordinator": rate.Limit{Requests: 500, Window: time.Minute},
         "service":          rate.Limit{Requests: 10000, Window: time.Minute},
     }
-    
+
     return limits[actorType]
 }
 
 func (rl *RateLimiter) Allow(identity *Identity) bool {
     limit := rl.GetLimit(identity.Type)
-    
+
     key := fmt.Sprintf("ratelimit:publish:%s", identity.Sub)
-    
+
     count, _ := redis.Incr(key)
     if count == 1 {
         redis.Expire(key, limit.Window)
     }
-    
+
     return count <= limit.Requests
 }
 ```
@@ -1205,7 +1205,7 @@ class EventPublisher {
     avgLatency: 0,
     pendingAcks: 0,
   };
-  
+
   async reportMetrics(): Promise<void> {
     // Report to analytics service
     await analytics.track('event_publisher_metrics', {
@@ -1232,7 +1232,7 @@ var (
         },
         []string{"event_type", "actor_type"},
     )
-    
+
     eventsPublished = prometheus.NewCounterVec(
         prometheus.CounterOpts{
             Name: "events_published_total",
@@ -1240,7 +1240,7 @@ var (
         },
         []string{"topic", "event_type"},
     )
-    
+
     eventsDuplicated = prometheus.NewCounterVec(
         prometheus.CounterOpts{
             Name: "events_duplicated_total",
@@ -1248,7 +1248,7 @@ var (
         },
         []string{"event_type"},
     )
-    
+
     eventsRejected = prometheus.NewCounterVec(
         prometheus.CounterOpts{
             Name: "events_rejected_total",
@@ -1256,7 +1256,7 @@ var (
         },
         []string{"reason", "event_type"},
     )
-    
+
     publishLatency = prometheus.NewHistogramVec(
         prometheus.HistogramOpts{
             Name:    "event_publish_latency_seconds",

@@ -85,11 +85,11 @@ async def stream_rte_progress():
 
 **Why this doesn't work well**:
 
-1. **Long Wait Times**: 
+1. **Long Wait Times**:
    - LLM streaming: Text appears immediately, keeps user engaged
    - RTE: User waits 30-120s with nothing happening → bad UX
 
-2. **Connection Management**: 
+2. **Connection Management**:
    - LLM: Connection open for 10s max
    - RTE: Connection open for 120s → timeout issues, resource waste
 
@@ -192,9 +192,9 @@ carePlanSR.on('completed', (plan) => savePlan(plan));
 
 #### Current (Synchronous)
 ```
-User clicks "Check Coverage" 
-  → Frontend waits 30s 
-  → Timeout error 
+User clicks "Check Coverage"
+  → Frontend waits 30s
+  → Timeout error
   → User retries
 ```
 
@@ -404,8 +404,8 @@ IncludedHealth uses **TWO separate Pusher products**:
    - `call_accepted`, `call_ended`, `join_call`, `appointment_ready`, `paid_extend_call_request`
 4. **Weeks 17-20**: Deprecate Pusher Channels, remove GraphQL field
 
-**Incremental Cost**: ~$10-15k (client SDKs + migration)  
-**Annual Savings**: $1.2-3.6k+ (Year 2+)  
+**Incremental Cost**: ~$10-15k (client SDKs + migration)
+**Annual Savings**: $1.2-3.6k+ (Year 2+)
 **Strategic Value**: Immediate (full control, reliability, unified platform)
 
 ### Migration Strategy
@@ -465,13 +465,13 @@ query websocketInfo {
 - Deprecate Pusher Channels (Weeks 17-20)
 - **Incremental cost**: Only $10-15k (infrastructure shared with RTE)
 
-**Rationale**: 
+**Rationale**:
 - ✅ **Build once, use twice** - Single infrastructure for RTE + video visits
 - ✅ **Proven fallback** - iOS already polls when Pusher fails
 - ✅ **INC-801 lessons** - Vendor support unreliable (7-8 day response)
 - ✅ **Lower total cost** - Shared operations, no additional infrastructure
 
-**See**: 
+**See**:
 - `EVENT_DRIVEN_INDEX.md` → "Replacing Pusher Channels" for 450+ line detailed specification
 - `PUSHER_RESEARCH_FINDINGS.md` → Complete Glean research on Pusher usage
 
@@ -726,7 +726,7 @@ Frontend                     WebSocket Gateway              Kafka               
 
 ---
 
-**Document Version**: 1.0  
-**Created**: 2025-01-15  
-**Status**: DRAFT  
+**Document Version**: 1.0
+**Created**: 2025-01-15
+**Status**: DRAFT
 **Owner**: TBD

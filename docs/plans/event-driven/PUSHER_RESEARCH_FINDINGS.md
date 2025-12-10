@@ -11,8 +11,8 @@ IncludedHealth uses **TWO different Pusher products**:
 
 ### Status: MIGRATION IN PROGRESS
 
-**Epic**: RET-402 - Move away from PusherBeam as third party vendor for Web Push  
-**Proposal**: [Replace Pusher Beams with Firebase Cloud Messaging](https://includedhealth.atlassian.net/wiki/spaces/ENG/pages/5344264259)  
+**Epic**: RET-402 - Move away from PusherBeam as third party vendor for Web Push
+**Proposal**: [Replace Pusher Beams with Firebase Cloud Messaging](https://includedhealth.atlassian.net/wiki/spaces/ENG/pages/5344264259)
 **EDD**: [PusherBeam migration to FCM](https://includedhealth.atlassian.net/wiki/spaces/ENG/pages/5357830231)
 
 ### Why Migrating?
@@ -142,15 +142,15 @@ From iOS app README:
 
 ### Pusher Beams (Web Push)
 
-**Historical Cost**: $99-499/month  
-**Issues**: Connection quota limits, unreliable delivery (0.17% success rate during incident)  
-**Replacement**: Firebase Cloud Messaging (FCM) - Free tier sufficient  
+**Historical Cost**: $99-499/month
+**Issues**: Connection quota limits, unreliable delivery (0.17% success rate during incident)
+**Replacement**: Firebase Cloud Messaging (FCM) - Free tier sufficient
 **Savings**: $1.2-6k/year
 
 ### Pusher Channels (WebSocket)
 
-**Current Cost**: Unknown (not found in Glean search)  
-**Estimated**: Likely $99-299+/month based on Pusher pricing tiers  
+**Current Cost**: Unknown (not found in Glean search)
+**Estimated**: Likely $99-299+/month based on Pusher pricing tiers
 **Annual**: $1.2-3.6k+/year
 
 ---
@@ -247,12 +247,11 @@ From iOS app README:
 
 ## Quotes to Include
 
-> "Because Pusher is not 100% reliable, we use the call-status API to get the end status whenever we receive the roomCompleted or roomNotFound events as well as the pusher event."  
+> "Because Pusher is not 100% reliable, we use the call-status API to get the end status whenever we receive the roomCompleted or roomNotFound events as well as the pusher event."
 > — iOS Video Visits README
 
-> "That PusherBeam support is unreliable non-existent (Beside 1 AI bot that auto-replies to emails)"  
+> "That PusherBeam support is unreliable non-existent (Beside 1 AI bot that auto-replies to emails)"
 > — INC-801 Incident Report
 
-> "Only 97 of 57K push notifications delivered in 7 days (0.17%)"  
+> "Only 97 of 57K push notifications delivered in 7 days (0.17%)"
 > — INC-801 Incident Report
-

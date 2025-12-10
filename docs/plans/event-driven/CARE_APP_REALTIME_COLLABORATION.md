@@ -34,18 +34,18 @@ graph TB
         CC2[Care Coordinator 2<br/>Editing Task #789]
         CC3[Care Coordinator 3<br/>Viewing Task List]
     end
-    
+
     subgraph "WebSocket Gateway"
         WS[WebSocket Server]
         PRESENCE[Presence Tracker]
         SUB[Subscription Manager]
     end
-    
+
     subgraph "Backend Services"
         CAREFLOW[CareFlow Service]
         KAFKA[Kafka Event Stream]
     end
-    
+
     subgraph "Event Types"
         TASK_UPDATED[task.updated]
         TASK_ASSIGNED[task.assigned]
@@ -54,25 +54,25 @@ graph TB
         PRESENCE_LEAVE[presence.user_left]
         TYPING[presence.typing]
     end
-    
+
     CC1 -->|Subscribe: task:789| WS
     CC2 -->|Edit task:789| WS
     CC3 -->|Subscribe: task_list| WS
-    
+
     WS --> PRESENCE
     WS --> SUB
-    
+
     CC2 -->|Update task| CAREFLOW
     CAREFLOW -->|Emit event| KAFKA
     KAFKA --> WS
-    
+
     WS -->|Push update| CC1
     WS -->|Push update| CC2
     WS -->|Push update| CC3
-    
+
     PRESENCE -->|User joined task:789| CC1
     PRESENCE -->|User typing| CC1
-    
+
     style WS fill:#e1ffe1
     style PRESENCE fill:#ffe1e1
     style KAFKA fill:#e1f5ff
@@ -170,7 +170,7 @@ interface PresenceInfo {
 // Care App - Task View Header
 <TaskHeader>
   <TaskTitle>Task #789: Contact member about appointment</TaskTitle>
-  
+
   <PresenceIndicators>
     {presenceInfo.map(user => (
       <Avatar
@@ -370,21 +370,21 @@ const { tasks } = useMemberTasks('A123456');
 ```typescript
 const completeTask = async (taskId: string) => {
   // 1. Optimistic update (immediate UI change)
-  setTasks(tasks => tasks.map(t => 
+  setTasks(tasks => tasks.map(t =>
     t.id === taskId ? { ...t, status: 'completed' } : t
   ));
-  
+
   // 2. Send mutation to backend
   try {
     await taskService.completeTask(taskId);
   } catch (error) {
     // 3. Revert on error
-    setTasks(tasks => tasks.map(t => 
+    setTasks(tasks => tasks.map(t =>
       t.id === taskId ? { ...t, status: 'in_progress' } : t
     ));
     toast.error('Failed to complete task');
   }
-  
+
   // 4. WebSocket event confirms change (reconcile)
   // (handled by useTaskSubscription hook)
 };
@@ -436,7 +436,7 @@ interface UpdateTaskRequest {
 // Backend validates version before applying changes
 function updateTask(req: UpdateTaskRequest): Task | ConflictError {
   const currentTask = db.getTask(req.task_id);
-  
+
   if (currentTask.version !== req.version) {
     // Conflict! Someone else updated the task
     return {
@@ -447,7 +447,7 @@ function updateTask(req: UpdateTaskRequest): Task | ConflictError {
       current_task: currentTask
     };
   }
-  
+
   // Apply changes and increment version
   const updatedTask = {
     ...currentTask,
@@ -456,7 +456,7 @@ function updateTask(req: UpdateTaskRequest): Task | ConflictError {
     last_modified_by: req.user_id,
     last_modified_at: new Date().toISOString()
   };
-  
+
   db.saveTask(updatedTask);
   return updatedTask;
 }
@@ -470,7 +470,7 @@ const TaskEditForm = () => {
   const [task, setTask] = useState<Task>(initialTask);
   const [conflictDetected, setConflictDetected] = useState(false);
   const [conflictInfo, setConflictInfo] = useState<ConflictInfo | null>(null);
-  
+
   const saveTask = async () => {
     try {
       await taskService.updateTask({
@@ -478,7 +478,7 @@ const TaskEditForm = () => {
         version: task.version,  // Include version for optimistic locking
         changes: { notes: task.notes, status: task.status }
       });
-      
+
       toast.success('Task saved');
     } catch (error) {
       if (error.code === 'CONFLICT') {
@@ -493,11 +493,11 @@ const TaskEditForm = () => {
       }
     }
   };
-  
+
   return (
     <>
       <TaskForm task={task} onChange={setTask} onSave={saveTask} />
-      
+
       {conflictDetected && (
         <ConflictResolutionModal
           conflict={conflictInfo}
@@ -528,19 +528,19 @@ const TaskEditForm = () => {
     <strong>{conflictInfo.modified_by}</strong> updated this task while you were editing.
   </p>
   <p>Last updated: {formatTimestamp(conflictInfo.modified_at)}</p>
-  
+
   <SplitView>
     <YourChanges>
       <h3>Your Changes</h3>
       <DiffView before={originalTask} after={yourChanges} />
     </YourChanges>
-    
+
     <TheirChanges>
       <h3>Their Changes</h3>
       <DiffView before={originalTask} after={theirChanges} />
     </TheirChanges>
   </SplitView>
-  
+
   <Actions>
     <Button onClick={() => onResolve('keep_theirs')}>
       Keep Their Changes
@@ -651,14 +651,14 @@ const ActivityFeed = () => {
     filter: { team_id: currentTeamId },
     limit: 50
   });
-  
+
   return (
     <FeedContainer>
       <FeedHeader>
         <h2>Team Activity</h2>
         <FilterDropdown />
       </FeedHeader>
-      
+
       <FeedList>
         {activities.map(activity => (
           <ActivityItem key={activity.id}>
@@ -844,13 +844,13 @@ func (g *Gateway) FilterEventForUser(event Event, user User) (Event, bool) {
     switch event.Type {
     case "task.updated", "task.assigned":
         taskID := event.Subject.ID
-        
+
         // Query Authzed for permission
         allowed, err := g.authzed.Check(user.ID, "view", "task", taskID)
         if err != nil || !allowed {
             return Event{}, false  // Don't send event
         }
-        
+
         // Check if task contains PHI
         if event.Data.ContainsPHI {
             // Verify user has PHI access for this member
@@ -861,9 +861,9 @@ func (g *Gateway) FilterEventForUser(event Event, user User) (Event, bool) {
                 event.Data = g.redactPHI(event.Data)
             }
         }
-        
+
         return event, true
-        
+
     case "presence.user_joined":
         // Only send presence to users viewing the same task
         taskID := event.Data.TaskID
@@ -872,7 +872,7 @@ func (g *Gateway) FilterEventForUser(event Event, user User) (Event, bool) {
         }
         return Event{}, false
     }
-    
+
     return event, true
 }
 ```
@@ -892,7 +892,7 @@ func (s *TaskService) UpdateTask(ctx context.Context, req *UpdateTaskRequest) (*
     if err != nil {
         return nil, err
     }
-    
+
     if currentTask.Version != req.Version {
         return nil, ErrConflict{
             CurrentVersion: currentTask.Version,
@@ -900,18 +900,18 @@ func (s *TaskService) UpdateTask(ctx context.Context, req *UpdateTaskRequest) (*
             CurrentTask: currentTask,
         }
     }
-    
+
     // 2. Apply changes and increment version
     updatedTask := applyChanges(currentTask, req.Changes)
     updatedTask.Version = currentTask.Version + 1
     updatedTask.LastModifiedBy = req.UserID
     updatedTask.LastModifiedAt = time.Now()
-    
+
     // 3. Save to database
     if err := s.repo.SaveTask(ctx, updatedTask); err != nil {
         return nil, err
     }
-    
+
     // 4. Emit event to Kafka
     event := TaskUpdatedEvent{
         Type: "task.updated",
@@ -925,9 +925,9 @@ func (s *TaskService) UpdateTask(ctx context.Context, req *UpdateTaskRequest) (*
         },
         Timestamp: time.Now(),
     }
-    
+
     s.eventProducer.Publish(ctx, "careflow.task.updated", event)
-    
+
     return updatedTask, nil
 }
 ```
@@ -941,20 +941,20 @@ type PresenceService struct {
 
 func (s *PresenceService) UserJoinedTask(ctx context.Context, taskID, userID string, state PresenceState) error {
     key := fmt.Sprintf("presence:task:%s", taskID)
-    
+
     presenceInfo := PresenceInfo{
         UserID: userID,
         State: state,
         JoinedAt: time.Now(),
     }
-    
+
     // Store in Redis with 5-minute expiry (extended by heartbeats)
     if err := s.redis.HSet(ctx, key, userID, presenceInfo).Err(); err != nil {
         return err
     }
-    
+
     s.redis.Expire(ctx, key, 5*time.Minute)
-    
+
     // Emit presence event
     event := PresenceUserJoinedEvent{
         Type: "presence.user_joined",
@@ -962,9 +962,9 @@ func (s *PresenceService) UserJoinedTask(ctx context.Context, taskID, userID str
         User: presenceInfo,
         Timestamp: time.Now(),
     }
-    
+
     s.eventProducer.Publish(ctx, "careflow.presence.user_joined", event)
-    
+
     return nil
 }
 
@@ -975,12 +975,12 @@ func (s *PresenceService) UpdatePresenceState(ctx context.Context, taskID, userI
 
 func (s *PresenceService) UserLeftTask(ctx context.Context, taskID, userID string) error {
     key := fmt.Sprintf("presence:task:%s", taskID)
-    
+
     // Remove from Redis
     if err := s.redis.HDel(ctx, key, userID).Err(); err != nil {
         return err
     }
-    
+
     // Emit presence event
     event := PresenceUserLeftEvent{
         Type: "presence.user_left",
@@ -988,19 +988,19 @@ func (s *PresenceService) UserLeftTask(ctx context.Context, taskID, userID strin
         UserID: userID,
         Timestamp: time.Now(),
     }
-    
+
     s.eventProducer.Publish(ctx, "careflow.presence.user_left", event)
-    
+
     return nil
 }
 
 // Heartbeat to keep presence alive
 func (s *PresenceService) Heartbeat(ctx context.Context, taskID, userID string) error {
     key := fmt.Sprintf("presence:task:%s", taskID)
-    
+
     // Extend expiry
     s.redis.Expire(ctx, key, 5*time.Minute)
-    
+
     return nil
 }
 ```
@@ -1014,25 +1014,25 @@ export const useTaskSubscription = (taskId: string) => {
   const [task, setTask] = useState<Task | null>(null);
   const [presenceInfo, setPresenceInfo] = useState<PresenceInfo[]>([]);
   const wsClient = useWebSocket();
-  
+
   useEffect(() => {
     // Subscribe to task updates and presence
     wsClient.subscribe(`task:${taskId}`);
-    
+
     // Handle task updates
     const unsubTask = wsClient.on('task.updated', (event) => {
       if (event.task_id === taskId) {
         setTask(event.task);
       }
     });
-    
+
     // Handle presence events
     const unsubPresence = wsClient.on('presence.*', (event) => {
       if (event.task_id === taskId) {
         updatePresence(event);
       }
     });
-    
+
     // Send presence heartbeat every 30 seconds
     const heartbeatInterval = setInterval(() => {
       wsClient.send({
@@ -1041,7 +1041,7 @@ export const useTaskSubscription = (taskId: string) => {
         user_id: currentUserId,
       });
     }, 30000);
-    
+
     // Announce joining task
     wsClient.send({
       type: 'presence.user_joined',
@@ -1049,13 +1049,13 @@ export const useTaskSubscription = (taskId: string) => {
       user_id: currentUserId,
       state: 'viewing',
     });
-    
+
     // Cleanup
     return () => {
       unsubTask();
       unsubPresence();
       clearInterval(heartbeatInterval);
-      
+
       // Announce leaving task
       wsClient.send({
         type: 'presence.user_left',
@@ -1064,7 +1064,7 @@ export const useTaskSubscription = (taskId: string) => {
       });
     };
   }, [taskId]);
-  
+
   return { task, presenceInfo };
 };
 ```
@@ -1078,11 +1078,11 @@ export const TaskList = () => {
     filter: { assigned_to: currentUserId },
     sort: { field: 'due_date', order: 'asc' }
   });
-  
+
   return (
     <div>
       <h1>My Tasks</h1>
-      
+
       {loading ? (
         <LoadingSpinner />
       ) : (
@@ -1105,15 +1105,15 @@ export const useTaskList = (options: TaskListOptions) => {
   const [tasks, setTasks] = useState<Task[]>([]);
   const [loading, setLoading] = useState(true);
   const wsClient = useWebSocket();
-  
+
   useEffect(() => {
     // Initial fetch
     fetchTasks(options).then(setTasks).finally(() => setLoading(false));
-    
+
     // Subscribe to task list updates
     const channel = `task_list:assigned_to:${options.filter.assigned_to}`;
     wsClient.subscribe(channel);
-    
+
     // Handle live updates
     const unsub = wsClient.on('task.*', (event) => {
       switch (event.type) {
@@ -1122,14 +1122,14 @@ export const useTaskList = (options: TaskListOptions) => {
           // Add new task to list
           setTasks(prev => [...prev, event.task]);
           break;
-          
+
         case 'task.updated':
           // Update existing task
-          setTasks(prev => prev.map(t => 
+          setTasks(prev => prev.map(t =>
             t.id === event.task_id ? event.task : t
           ));
           break;
-          
+
         case 'task.completed':
           // Remove completed task after animation
           setTimeout(() => {
@@ -1138,13 +1138,13 @@ export const useTaskList = (options: TaskListOptions) => {
           break;
       }
     });
-    
+
     return () => {
       unsub();
       wsClient.unsubscribe(channel);
     };
   }, [options]);
-  
+
   return { tasks, loading };
 };
 ```

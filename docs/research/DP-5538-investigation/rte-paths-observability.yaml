@@ -1,0 +1,264 @@
+# RTE Paths Monitoring - Add this to coverage/platform/observability.yaml
+#
+# This defines custom alarms and dashboards for monitoring all paths to the RTE service
+# Each alarm definition automatically creates a corresponding panel on the Custom Alarms dashboard
+#
+# To apply: Add this content to the `alarms.groups` section of coverage/platform/observability.yaml
+
+  # RTE Traffic Monitoring - Critical path monitoring after DP-5538 incident
+  rte-traffic-monitoring:
+    - name: Total RTE Request Rate from coverage-server
+      description: |
+        Monitor total request rate to RTE through coverage-server.
+        Spike detection for internal DOS scenarios (DP-5538).
+        NOTE: Set to warning while validating thresholds after 50-worker increase.
+      query: |
+        sum(rate(traces_spanmetrics_calls_total{
+          service="coverage-server",
+          span_name=~"HTTP POST.*coverage.*|.*rte.*|.*RTE.*"
+        }[5m]))
+      dataSource: metrics
+      runbookURL: https://github.com/ConsultingMD/coverage/blob/main/docs/runbooks/rte-traffic-spike-runbook.md
+      configs:
+        production:
+          severity: warning
+          threshold: 10
+          gracePeriod: 5m
+          condition: above
+          alertOnNoData: false
+        uat:
+          severity: warning
+          threshold: 15
+          gracePeriod: 5m
+          condition: above
+          alertOnNoData: false
+
+    - name: cost-share Service RTE Traffic Rate
+      description: |
+        Monitor cost-share service traffic to coverage-server (primary suspect in DP-5538).
+        With 50 workers, alert if rate exceeds 5 req/s (normal baseline ~0.5-1 req/s).
+        NOTE: Set to warning while validating thresholds after 50-worker increase.
+      query: |
+        sum(rate(traces_spanmetrics_calls_total{
+          service="cost-share",
+          span_name="HTTP POST coverage.production.grnds.com"
+        }[5m]))
+      dataSource: metrics
+      runbookURL: https://github.com/ConsultingMD/coverage/blob/main/docs/runbooks/rte-traffic-spike-runbook.md
+      configs:
+        production:
+          severity: warning
+          threshold: 5.0
+          gracePeriod: 5m
+          condition: above
+          alertOnNoData: false
+
+    - name: RTE Request Rate by Client Service
+      description: |
+        Breakdown of RTE requests by calling service.
+        Use for identifying aberrant clients during traffic spikes.
+      query: |
+        topk(10, sum by (service) (rate(traces_spanmetrics_calls_total{
+          span_name="HTTP POST coverage.production.grnds.com"
+        }[5m])))
+      dataSource: metrics
+      runbookURL: https://github.com/ConsultingMD/coverage/blob/main/docs/runbooks/rte-traffic-spike-runbook.md
+      configs:
+        default:
+          severity: info
+          threshold: 0
+          condition: below
+      disabledEnvironments:
+        - uat
+
+    - name: medication Service RTE Traffic Rate
+      description: |
+        Monitor medication service (involved in INC-882 similar incident).
+        Alert on sustained high rate indicating possible Kafka replay or batch job issue.
+      query: |
+        sum(rate(traces_spanmetrics_calls_total{
+          service="medication",
+          span_name="HTTP POST coverage.production.grnds.com"
+        }[5m]))
+      dataSource: metrics
+      runbookURL: https://github.com/ConsultingMD/coverage/blob/main/docs/runbooks/rte-traffic-spike-runbook.md
+      configs:
+        production:
+          severity: warning
+          threshold: 5.0
+          gracePeriod: 10m
+          condition: above
+          alertOnNoData: false
+
+    - name: RTE P95 Latency from coverage-server
+      description: |
+        Monitor P95 latency for RTE requests through coverage-server.
+        High latency may indicate Stedi connection saturation.
+      query: |
+        histogram_quantile(0.95, sum by(le) (rate(traces_spanmetrics_latency_bucket{
+          service="coverage-server",
+          span_name=~".*rte.*|.*RTE.*"
+        }[5m])))
+      dataSource: metrics
+      runbookURL: https://github.com/ConsultingMD/coverage/blob/main/docs/runbooks/rte-traffic-spike-runbook.md
+      configs:
+        production:
+          severity: warning
+          threshold: 15000
+          gracePeriod: 10m
+          condition: above
+          alertOnNoData: false
+        uat:
+          severity: info
+          threshold: 20000
+          gracePeriod: 10m
+          condition: above
+          alertOnNoData: false
+
+    - name: RTE Error Rate by Client Service
+      description: |
+        Monitor error rate by client service to identify problematic clients.
+      query: |
+        sum by (service) (rate(traces_spanmetrics_calls_total{
+          span_name="HTTP POST coverage.production.grnds.com",
+          status_code=~"5.*"
+        }[5m]))
+      dataSource: metrics
+      runbookURL: https://github.com/ConsultingMD/coverage/blob/main/docs/runbooks/rte-traffic-spike-runbook.md
+      configs:
+        production:
+          severity: warning
+          threshold: 1.0
+          gracePeriod: 5m
+          condition: above
+          alertOnNoData: false
+
+    - name: realtime-eligibility Service Request Rate
+      description: |
+        Direct monitoring of realtime-eligibility service inbound RTEProxyAsync requests.
+        Excludes RTEProxyPollingStatus calls (which are expected to be higher volume).
+        With 50 workers (increased from 15), baseline capacity is ~50 req/s.
+        Alert on sustained high rate >150 req/s indicating potential overload.
+        NOTE: Set to warning while validating new thresholds after worker increase.
+      query: |
+        sum(rate(traces_spanmetrics_calls_total{
+          service="realtime-eligibility",
+          span_name=~".*RTEProxyAsync.*"
+        }[5m]))
+      dataSource: metrics
+      runbookURL: https://github.com/ConsultingMD/coverage/blob/main/docs/runbooks/rte-traffic-spike-runbook.md
+      configs:
+        production:
+          severity: warning
+          threshold: 150
+          gracePeriod: 5m
+          condition: above
+          alertOnNoData: false
+        uat:
+          severity: warning
+          threshold: 200
+          gracePeriod: 5m
+          condition: above
+          alertOnNoData: false
+
+    - name: Frontend RTE Traffic (member-ios-app + member-android-app)
+      description: |
+        Aggregate traffic from mobile apps to coverage-server.
+        Helps distinguish frontend from batch traffic patterns.
+      query: |
+        sum(rate(traces_spanmetrics_calls_total{
+          service=~"member-ios-app|member-android-app",
+          span_name="HTTP POST coverage.production.grnds.com"
+        }[5m]))
+      dataSource: metrics
+      runbookURL: https://github.com/ConsultingMD/coverage/blob/main/docs/runbooks/rte-traffic-spike-runbook.md
+      configs:
+        default:
+          severity: info
+          threshold: 0
+          condition: below
+      disabledEnvironments:
+        - uat
+
+    - name: Batch/Backend RTE Traffic (High-volume services)
+      description: |
+        Aggregate traffic from known batch/backend services.
+        Includes: cost-share, medication, revenue-cycle-management, wizard.
+      query: |
+        sum(rate(traces_spanmetrics_calls_total{
+          service=~"cost-share|medication|revenue-cycle-management|wizard",
+          span_name="HTTP POST coverage.production.grnds.com"
+        }[5m]))
+      dataSource: metrics
+      runbookURL: https://github.com/ConsultingMD/coverage/blob/main/docs/runbooks/rte-traffic-spike-runbook.md
+      configs:
+        production:
+          severity: warning
+          threshold: 10
+          gracePeriod: 10m
+          condition: above
+          alertOnNoData: false
+
+    - name: GraphQL Operation rteProxy Call Rate
+      description: |
+        Monitor direct GraphQL rteProxy operation call rate.
+        Maps to GraphQL operation used by most clients.
+      query: |
+        sum(rate(graphql_requests_total{
+          app="coverage-server",
+          operation_name="rteProxy"
+        }[5m]))
+      dataSource: metrics
+      runbookURL: https://github.com/ConsultingMD/coverage/blob/main/docs/runbooks/rte-traffic-spike-runbook.md
+      configs:
+        default:
+          severity: info
+          threshold: 0
+          condition: below
+      disabledEnvironments:
+        - uat
+
+    - name: GraphQL Operation warmRteCache Call Rate
+      description: |
+        Monitor warmRteCache mutation call rate (pre-warming/batch operations).
+      query: |
+        sum(rate(graphql_requests_total{
+          app="coverage-server",
+          operation_name="warmRteCache"
+        }[5m]))
+      dataSource: metrics
+      runbookURL: https://github.com/ConsultingMD/coverage/blob/main/docs/runbooks/rte-traffic-spike-runbook.md
+      configs:
+        default:
+          severity: info
+          threshold: 0
+          condition: below
+      disabledEnvironments:
+        - uat
+
+# Additional context for runbook:
+#
+# DP-5538 Incident Response:
+# 1. Check "RTE Request Rate by Client Service" panel to identify offending client
+# 2. Check "cost-share Service RTE Traffic Rate" - primary suspect based on incident
+# 3. Review "RTE P95 Latency" - high latency indicates Stedi saturation (15 connection limit)
+# 4. Compare "Frontend RTE Traffic" vs "Batch/Backend RTE Traffic" to identify traffic type
+# 5. Check for hourly spike patterns (cron job signature at :50 past hour)
+#
+# Related Incidents:
+# - DP-5538 (Nov 20, 2025): cost-share service 10x traffic spike
+# - INC-882 (Nov 2, 2025): medication service Kafka consumer replay
+# - INC-864 (Oct 2025): medication Kafka replay saturated Stedi
+# - INC-824, INC-821 (July 2025): coverage-server traffic surges
+#
+# Mitigation Actions:
+# - Identify client via "RTE Request Rate by Client Service"
+# - Check client's logs for errors, Kafka lag, cron schedules
+# - Temporary: Scale down client pods or disable batch jobs
+# - Long-term: Implement traffic control architecture (ACT-2366)
+#
+# Key Services to Monitor:
+# - cost-share (batch cost calculations)
+# - medication (Kafka consumers, batch jobs)
+# - revenue-cycle-management (billing batch jobs)
+# - wizard (member flow orchestration)

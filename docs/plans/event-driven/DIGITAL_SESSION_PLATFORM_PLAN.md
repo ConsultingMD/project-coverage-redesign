@@ -1,7 +1,7 @@
 # Digital Session Platform: Event-Driven Member Experience
 
-**Extends**: `EVENT_DRIVEN_RTE_PLAN.md`  
-**Status**: DRAFT  
+**Extends**: `EVENT_DRIVEN_RTE_PLAN.md`
+**Status**: DRAFT
 **Created**: 2025-01-15
 
 ---
@@ -68,33 +68,33 @@ graph TB
         MEMBER[Member Data<br/>Questionnaires, Symptoms]
         BIO[Biometric Data<br/>Wearables, Apple Health]
     end
-    
+
     subgraph "DECIDE: The Brain"
         BRAIN[Recommendation Platform]
         NBA[Next Best Actions<br/>PSRs, Goals, Tasks]
     end
-    
+
     subgraph "ACT: CareFlow"
         CF[CareFlow Orchestration]
         SR[Service Requests]
         TASKS[Tasks]
         SD[Service Deliveries]
     end
-    
+
     CLINICAL --> DT
     ENGAGEMENT --> DT
     MEMBER --> DT
     BIO --> DT
-    
+
     DT --> BRAIN
     BRAIN --> NBA
     NBA --> CF
     CF --> SR
     SR --> SD
     SD --> TASKS
-    
+
     TASKS -.feedback.-> DT
-    
+
     style DT fill:#e1f5ff
     style CF fill:#ffe1f5
 ```
@@ -125,40 +125,40 @@ graph TB
         ANDROID[Android App]
         CARE[Care App]
     end
-    
+
     subgraph "Digital Session Platform (NEW)"
         WSG[WebSocket Gateway]
         ESR[Event Session Router]
         REDIS[Redis Session State]
     end
-    
+
     subgraph "Event Infrastructure"
         KAFKA[Kafka Event Topics]
         PRODUCER[Event Producers]
     end
-    
+
     subgraph "Backend Services"
         CAREFLOW[CareFlow<br/>Service Requests, Tasks]
         RTE[RTE Service]
         DT[Digital Twin]
         JARVIS[Jarvis<br/>Member App Backend]
     end
-    
+
     MX -->|1. Connect + Subscribe| WSG
     IOS -->|1. Connect + Subscribe| WSG
     ANDROID -->|1. Connect + Subscribe| WSG
     CARE -->|1. Connect + Subscribe| WSG
-    
+
     WSG -->|2. Store subscription| REDIS
     WSG -->|3. Consume events| KAFKA
-    
+
     CAREFLOW -->|Emit events| PRODUCER
     RTE -->|Emit events| PRODUCER
     DT -->|Emit events| PRODUCER
     JARVIS -->|Emit events| PRODUCER
-    
+
     PRODUCER -->|Publish| KAFKA
-    
+
     ESR -->|4. Route to subscribers| WSG
     WSG -->|5. Push updates| MX
     WSG -->|5. Push updates| IOS
@@ -544,7 +544,7 @@ client.createSession(
         print("Service request completed: \(event)")
         // Update SwiftUI view
     }
-    
+
     // 4. Submit service request
     session.submitServiceRequest(
         service: "RTE",
@@ -578,7 +578,7 @@ client.createSession(
         println("Service request completed: $event")
         // Update Compose UI
     }
-    
+
     // 4. Submit service request
     session.submitServiceRequest(
         service = "RTE",
@@ -708,14 +708,14 @@ renderToDoList(tasks);
 ```swift
 class CoverageViewController: UIViewController {
     var session: DigitalSession?
-    
+
     override func viewDidLoad() {
         super.viewDidLoad()
-        
+
         // Create session
         client.createSession(type: .app, channel: .ios) { session in
             self.session = session
-            
+
             // Subscribe to RTE events
             session.on(.rteCompleted) { [weak self] event in
                 DispatchQueue.main.async {
@@ -724,7 +724,7 @@ class CoverageViewController: UIViewController {
             }
         }
     }
-    
+
     @IBAction func checkCoverageButtonTapped(_ sender: Any) {
         // Submit request
         session?.submitServiceRequest(
@@ -733,7 +733,7 @@ class CoverageViewController: UIViewController {
         ) { sr in
             // Show loading
             self.showLoadingState()
-            
+
             // Listen for completion
             sr.on(.completed) { [weak self] result in
                 DispatchQueue.main.async {
@@ -766,7 +766,7 @@ func application(
         let content = UNMutableNotificationContent()
         content.title = "Coverage Check Complete"
         content.body = "Your coverage has been verified"
-        
+
         UNUserNotificationCenter.current().add(
             UNNotificationRequest(
                 identifier: UUID().uuidString,
@@ -791,7 +791,7 @@ func application(
 @Composable
 fun CoverageScreen(viewModel: CoverageViewModel) {
     val coverageState by viewModel.coverageState.collectAsState()
-    
+
     Column {
         when (coverageState) {
             is CoverageState.Loading -> {
@@ -805,7 +805,7 @@ fun CoverageScreen(viewModel: CoverageViewModel) {
                 ErrorMessage(coverageState.error)
             }
         }
-        
+
         Button(onClick = { viewModel.checkCoverage() }) {
             Text("Check Coverage")
         }
@@ -815,25 +815,25 @@ fun CoverageScreen(viewModel: CoverageViewModel) {
 class CoverageViewModel : ViewModel() {
     private val _coverageState = MutableStateFlow<CoverageState>(CoverageState.Idle)
     val coverageState: StateFlow<CoverageState> = _coverageState
-    
+
     fun checkCoverage() {
         viewModelScope.launch {
             _coverageState.value = CoverageState.Loading
-            
+
             // Get active session
             val session = client.getActiveSession()
-            
+
             // Submit service request
             val sr = session.submitServiceRequest(
                 service = "RTE",
                 subject = accountId
             )
-            
+
             // Listen for completion
             sr.on(EventType.COMPLETED) { event ->
                 _coverageState.value = CoverageState.Success(event.coverage)
             }
-            
+
             sr.on(EventType.FAILED) { event ->
                 _coverageState.value = CoverageState.Error(event.error)
             }
@@ -948,7 +948,7 @@ Examples:
 
 ### Partitioning Strategy
 
-**Primary key: `session_id`** for session lifecycle events  
+**Primary key: `session_id`** for session lifecycle events
 **Secondary key: `member_id`** for member-scoped events
 
 Benefits:
@@ -1023,12 +1023,12 @@ func (g *Gateway) shouldPushToClient(event *Event, subscription *Subscription) b
     case "service_request":
         return contains(subscription.ServiceRequestIDs, event.ServiceRequestID)
     }
-    
+
     // Filter by event type
     if len(subscription.Events) > 0 && !contains(subscription.Events, "*") {
         return contains(subscription.Events, event.Type)
     }
-    
+
     return true
 }
 ```
@@ -1060,7 +1060,7 @@ func (s *Service) SubmitServiceRequest(ctx context.Context, req *ServiceRequest)
     if err := s.repo.CreateServiceRequest(ctx, req); err != nil {
         return err
     }
-    
+
     // Emit event
     s.eventProducer.Emit(ctx, &ServiceRequestSubmittedEvent{
         ServiceRequestID: req.ID,
@@ -1069,7 +1069,7 @@ func (s *Service) SubmitServiceRequest(ctx context.Context, req *ServiceRequest)
         HealthcareService: req.Service,
         SubmittedAt:      req.CreatedAt,
     })
-    
+
     return nil
 }
 
@@ -1078,7 +1078,7 @@ func (s *Service) CompleteServiceRequest(ctx context.Context, req *ServiceReques
     if err := s.repo.UpdateServiceRequest(ctx, req); err != nil {
         return err
     }
-    
+
     // Emit event
     s.eventProducer.Emit(ctx, &ServiceRequestCompletedEvent{
         ServiceRequestID: req.ID,
@@ -1088,7 +1088,7 @@ func (s *Service) CompleteServiceRequest(ctx context.Context, req *ServiceReques
         ResultData:       result.Data,
         CompletedAt:      time.Now(),
     })
-    
+
     return nil
 }
 ```
@@ -1102,7 +1102,7 @@ func (s *Service) CompleteServiceRequest(ctx context.Context, req *ServiceReques
 func (w *fetchRteWorker) FetchRteActivity(ctx context.Context, params ActivityParams) (*RTEResponse, error) {
     // Call Stedi
     response, err := w.stediGateway.ProxyEligibility(ctx, params.Request)
-    
+
     // Emit event with session context
     w.eventProducer.Emit(ctx, &RTECompletedEvent{
         SessionID:        params.SessionID,       // NEW: From request context
@@ -1111,7 +1111,7 @@ func (w *fetchRteWorker) FetchRteActivity(ctx context.Context, params ActivityPa
         MemberID:         params.MemberID,
         // ... rest of event
     })
-    
+
     return response, err
 }
 ```
@@ -1131,7 +1131,7 @@ class Api::V1::SessionsController < ApiController
       channel: request_channel,
       intent: params[:intent]
     )
-    
+
     # Emit event
     EventProducer.emit(
       type: 'sessions.lifecycle.created',
@@ -1143,14 +1143,14 @@ class Api::V1::SessionsController < ApiController
         created_at: @session.created_at
       }
     )
-    
+
     render json: @session
   end
-  
+
   def heartbeat
     # Update last activity
     @session.update!(last_activity_at: Time.current)
-    
+
     # Emit heartbeat event
     EventProducer.emit(
       type: 'sessions.lifecycle.active',
@@ -1160,7 +1160,7 @@ class Api::V1::SessionsController < ApiController
         last_activity_at: @session.last_activity_at
       }
     )
-    
+
     head :ok
   end
 end
@@ -1623,8 +1623,8 @@ User Action → Create Session → Submit SR → Instant Response
 
 ---
 
-**Document Version**: 1.0  
-**Created**: 2025-01-15  
-**Author**: AI Assistant (Claude)  
-**Status**: DRAFT  
+**Document Version**: 1.0
+**Created**: 2025-01-15
+**Author**: AI Assistant (Claude)
+**Status**: DRAFT
 **Extends**: EVENT_DRIVEN_RTE_PLAN.md

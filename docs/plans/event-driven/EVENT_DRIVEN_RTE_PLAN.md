@@ -2,7 +2,7 @@
 
 ## Executive Summary
 
-This document proposes replacing long-running synchronous RTE (Real-Time Eligibility) requests with an event-driven push notification system. The current architecture forces clients to wait for slow Stedi API responses (P95 > 10s, can exceed 30s), leading to timeout cascades, poor user experience, and system instability. 
+This document proposes replacing long-running synchronous RTE (Real-Time Eligibility) requests with an event-driven push notification system. The current architecture forces clients to wait for slow Stedi API responses (P95 > 10s, can exceed 30s), leading to timeout cascades, poor user experience, and system instability.
 
 The proposed solution provides:
 - **Generic event streaming infrastructure** (Kafka-based) that supports multiple use cases across IncludedHealth
@@ -138,8 +138,8 @@ pollingTimeout := model.PollingTimeoutConfig{
 ```go
 // Temporal workflow activity timeout: 120+ seconds
 // docs/traffic-control.md documents this requirement:
-// "The timeout for the specific HTTP call to Stedi must be long 
-//  (e.g., > 120 seconds). This is to accommodate Stedi's own 
+// "The timeout for the specific HTTP call to Stedi must be long
+//  (e.g., > 120 seconds). This is to accommodate Stedi's own
 //  internal retry window"
 ```
 
@@ -175,44 +175,44 @@ graph TB
         FE[Frontend iOS/Web]
         BE[Backend Services]
     end
-    
+
     subgraph "Gateway Layer"
         COV[coverage-server]
         MS[member-sponsorship]
     end
-    
+
     subgraph "Event Infrastructure (NEW)"
         EP[Event Producer Service]
         KAFKA[Kafka Event Stream]
         EC[Event Consumer Groups]
         WS[WebSocket Gateway]
     end
-    
+
     subgraph "RTE Service Layer"
         RTE[realtime-eligibility]
         TEMP[Temporal Workflows]
     end
-    
+
     subgraph "External"
         STEDI[Stedi API]
     end
-    
+
     FE -->|1. Subscribe to events| WS
     FE -->|2. Submit RTE request| COV
     BE -->|2. Submit RTE request| MS
-    
+
     COV -->|3. Enqueue job| RTE
     MS -->|3. Enqueue job| RTE
-    
+
     RTE -->|4. Start workflow| TEMP
     TEMP -->|5. Call| STEDI
     TEMP -->|6. Emit event| EP
-    
+
     EP -->|7. Publish| KAFKA
     KAFKA -->|8. Consume| EC
     EC -->|9. Push update| WS
     WS -->|10. Notify| FE
-    
+
     EC -->|9. Update cache/DB| COV
     EC -->|9. Update cache/DB| MS
 ```
@@ -230,7 +230,7 @@ graph TB
 - Provide event schema validation
 - Support event replay for debugging
 
-**Technology**: 
+**Technology**:
 - Go service (new microservice)
 - Publishes to Kafka topics
 - Uses CloudEvents standard for event format
@@ -242,21 +242,21 @@ message RTECompletionEvent {
   string event_id = 1;
   string event_type = 2;  // "rte.completed", "rte.failed", "rte.timeout"
   google.protobuf.Timestamp event_time = 3;
-  
+
   // RTE context
   string workflow_id = 4;
   string request_fingerprint = 5;
   string member_id = 6;
   string account_id = 7;
   string trading_partner_id = 8;
-  
+
   // Result data
   oneof result {
     RTESuccessPayload success = 10;
     RTEFailurePayload failure = 11;
     RTETimeoutPayload timeout = 12;
   }
-  
+
   // Response metadata
   bool was_cached = 20;
   bool downtime_detected = 21;
@@ -447,7 +447,7 @@ consumer.Start(ctx)
    }
    ```
 
-**Result**: 
+**Result**:
 - Frontend gets instant "processing" response
 - User sees progress indicator (not frozen)
 - Coverage appears when ready (push, not poll)
@@ -518,14 +518,14 @@ subscription {
 func (s *Service) EnrollAccount(ctx context.Context, req EnrollAccountRequest) error {
     // Submit RTE request (non-blocking)
     workflowID, err := s.rteGateway.EnqueueAsync(ctx, rteRequest)
-    
+
     // Mark enrollment as pending
     enrollment := &Enrollment{
         Status: "pending_rte",
         RTEWorkflowID: workflowID,
     }
     s.repo.SaveEnrollment(ctx, enrollment)
-    
+
     return nil  // Return immediately
 }
 
@@ -533,18 +533,18 @@ func (s *Service) EnrollAccount(ctx context.Context, req EnrollAccountRequest) e
 func (c *RTEConsumer) HandleCompletionEvent(ctx context.Context, event RTECompletionEvent) error {
     // Find pending enrollment
     enrollment, err := c.repo.GetEnrollmentByWorkflowID(ctx, event.WorkflowID)
-    
+
     // Finalize enrollment with RTE data
     enrollment.Status = "completed"
     enrollment.Coverage = event.Payload.Coverage
     c.repo.UpdateEnrollment(ctx, enrollment)
-    
+
     // Emit enrollment completion event
     c.eventProducer.Emit(ctx, EnrollmentCompletedEvent{
         EnrollmentID: enrollment.ID,
         AccountID: enrollment.AccountID,
     })
-    
+
     return nil
 }
 ```
@@ -587,7 +587,7 @@ rpc GetMemberSponsorshipAsync(GetMemberSponsorshipRequest) returns (GetMemberSpo
 message GetMemberSponsorshipAsyncResponse {
   string workflow_id = 1;
   string status = 2;  // "cached", "pending", "processing"
-  
+
   oneof result {
     MemberSponsorship cached_result = 10;  // If cache hit
     PendingWorkflow pending_info = 11;     // If cache miss
@@ -664,7 +664,7 @@ message PendingWorkflow {
 func (w *fetchRteWorker) FetchRteActivity(ctx context.Context, params ActivityParams) (*RTEResponse, error) {
     // Call Stedi
     response, err := w.stediGateway.ProxyEligibility(ctx, params.Request)
-    
+
     // Emit event (NEW)
     if err == nil {
         w.eventProducer.Emit(ctx, RTECompletionEvent{
@@ -688,7 +688,7 @@ func (w *fetchRteWorker) FetchRteActivity(ctx context.Context, params ActivityPa
             },
         })
     }
-    
+
     return response, err
 }
 ```
@@ -739,17 +739,17 @@ class CoverageScreen extends React.Component {
       memberId: this.props.memberId,
       onEvent: this.handleRTEEvent,
     });
-    
+
     // Submit async request
     this.checkCoverage();
   }
-  
+
   async checkCoverage() {
     // Returns immediately with workflow ID
     const { workflowId, status } = await this.api.checkCoverageAsync({
       memberId: this.props.memberId,
     });
-    
+
     if (status === 'cached') {
       // Cache hit - display immediately
       this.setState({ coverage: result });
@@ -758,7 +758,7 @@ class CoverageScreen extends React.Component {
       this.setState({ workflowId, status: 'loading' });
     }
   }
-  
+
   handleRTEEvent = (event) => {
     if (event.workflowId === this.state.workflowId) {
       // RTE completed - update UI
@@ -813,7 +813,7 @@ for _, member := range members {
         Priority: "batch",  // Low priority
         UseBatchAPI: true,  // Use Stedi Batch API (slow but unlimited concurrency)
     })
-    
+
     // Store workflow ID for event tracking
     batchJob.AddWorkflow(workflowID)
 }
@@ -989,13 +989,13 @@ type RetryConfig struct {
 type Consumer interface {
     // Register event handler
     RegisterHandler(eventType string, handler HandlerFunc)
-    
+
     // Start consuming (blocking)
     Start(ctx context.Context) error
-    
+
     // Graceful shutdown
     Stop(ctx context.Context) error
-    
+
     // Metrics
     Metrics() ConsumerMetrics
 }
@@ -1017,7 +1017,7 @@ consumer.RegisterHandler("rte.completed", func(ctx context.Context, event *Cloud
     if err := proto.Unmarshal(event.Data, &rteEvent); err != nil {
         return err
     }
-    
+
     // Handle event
     return handleRTECompletion(ctx, &rteEvent)
 })
@@ -1447,10 +1447,10 @@ message RTECompletionEvent {
 type Producer interface {
     // Emit single event
     Emit(ctx context.Context, event *CloudEvent) error
-    
+
     // Emit batch (transactional)
     EmitBatch(ctx context.Context, events []*CloudEvent) error
-    
+
     // Flush pending events (for graceful shutdown)
     Flush(ctx context.Context) error
 }
@@ -1923,14 +1923,14 @@ func (p *Producer) EmitRTECompletion(ctx context.Context, event *RTECompletionEv
     if err != nil {
         return err
     }
-    
+
     // Wrap in CloudEvent
     ce := cloudevents.NewEvent()
     ce.SetType("com.includedhealth.rte.completed")
     ce.SetSource("/realtime-eligibility")
     ce.SetID(event.EventID)
     ce.SetData("application/protobuf", data)
-    
+
     // Produce to Kafka
     return p.kafkaProducer.Produce(&kafka.Message{
         TopicPartition: kafka.TopicPartition{
@@ -1965,10 +1965,10 @@ func (c *RTEConsumer) Start(ctx context.Context) error {
         Group:   "coverage-server-rte-consumers",
         Topics:  []string{"rte-completion-events"},
     })
-    
+
     consumer.RegisterHandler("com.includedhealth.rte.completed", c.handleCompletion)
     consumer.RegisterHandler("com.includedhealth.rte.failed", c.handleFailure)
-    
+
     return consumer.Start(ctx)
 }
 
@@ -1977,18 +1977,18 @@ func (c *RTEConsumer) handleCompletion(ctx context.Context, event *cloudevents.E
     if err := proto.Unmarshal(event.Data(), &rteEvent); err != nil {
         return err
     }
-    
+
     // Update cache
     if err := c.cache.Set(ctx, rteEvent.RequestFingerprint, rteEvent.Payload); err != nil {
         return err
     }
-    
+
     // Check if any pending enrollments
     if enrollment, err := c.enrollment.GetPendingByWorkflowID(ctx, rteEvent.WorkflowID); err == nil {
         // Finalize enrollment
         return c.enrollment.Finalize(ctx, enrollment, rteEvent.Payload)
     }
-    
+
     return nil
 }
 ```
@@ -2066,8 +2066,8 @@ histogram_quantile(0.95, rate(websocket_push_duration_seconds_bucket[5m]))
 
 ---
 
-**Document Version**: 1.0  
-**Last Updated**: 2025-01-15  
-**Author**: AI Assistant (Claude)  
-**Reviewers**: [To be filled]  
+**Document Version**: 1.0
+**Last Updated**: 2025-01-15
+**Author**: AI Assistant (Claude)
+**Reviewers**: [To be filled]
 **Status**: DRAFT

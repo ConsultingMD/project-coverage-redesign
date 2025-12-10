@@ -23,41 +23,41 @@ graph TB
         CA[Care App]
         SVC[Backend Service]
     end
-    
+
     subgraph "WebSocket Gateway (Authorization)"
         AUTH[JWT Validator]
         AUTHZ[Authzed Client]
         FILTER[Event Filter]
         SUB[Subscription Manager]
     end
-    
+
     subgraph "Authorization Services"
         JWT_ISSUER[Auth0 / JWT Issuer]
         AUTHZED[Authzed / SpiceDB]
         AUDIT[Audit Log]
     end
-    
+
     subgraph "Event Sources"
         KAFKA[Kafka Events]
     end
-    
+
     MB -->|JWT Token| AUTH
     CA -->|JWT Token| AUTH
     SVC -->|Service JWT| AUTH
-    
+
     AUTH -->|Validate| JWT_ISSUER
     AUTH -->|Extract Claims| AUTHZ
     AUTHZ -->|Check Relationship| AUTHZED
     AUTHZ -->|Authorized| SUB
-    
+
     SUB -->|Subscribe| KAFKA
     KAFKA -->|Events| FILTER
     FILTER -->|Filter by Access| AUTHZ
     FILTER -->|Deliver| MB
     FILTER -->|Deliver| CA
-    
+
     AUTHZ -->|Log Access| AUDIT
-    
+
     style AUTH fill:#ffe1e1
     style AUTHZ fill:#e1f5ff
     style FILTER fill:#e1ffe1
@@ -114,10 +114,10 @@ class WebSocketGateway {
   async handleConnection(req: Request): Promise<Connection> {
     // 1. Extract JWT from Authorization header
     const token = extractBearerToken(req.headers.authorization);
-    
+
     // 2. Validate JWT signature (using Auth0 JWKS)
     const claims = await this.jwtValidator.validate(token);
-    
+
     // 3. Extract identity and permissions
     const identity = {
       sub: claims.sub,                    // "member:123" or "service:rte"
@@ -127,7 +127,7 @@ class WebSocketGateway {
       memberId: claims['https://includedhealth.com/member_id'],
       customerId: claims['https://includedhealth.com/customer_id'],
     };
-    
+
     // 4. Create authenticated connection
     return new Connection({
       id: generateConnectionId(),
@@ -207,7 +207,7 @@ definition member {
   relation care_coordinator: care_coordinator
   relation family_member: member
   relation care_team_member: care_coordinator | care_navigator
-  
+
   // Permissions
   permission view_events = self + care_coordinator + family_member + care_team_member
   permission view_pii = self + care_coordinator
@@ -217,7 +217,7 @@ definition member {
 // Care coordinator entity
 definition care_coordinator {
   relation managed_member: member
-  
+
   permission view_member_events = managed_member->view_events
 }
 
@@ -225,7 +225,7 @@ definition care_coordinator {
 definition event_channel {
   relation member: member
   relation subscriber: member | care_coordinator | service
-  
+
   permission subscribe = subscriber & member->view_events
 }
 ```
@@ -240,7 +240,7 @@ class SubscriptionManager {
   ): Promise<boolean> {
     // Parse channel: /member/:memberId/rte/*
     const { memberId, eventType } = parseChannel(channel);
-    
+
     // Check authorization using Authzed
     const authorized = await this.authzed.check({
       resource: {
@@ -253,7 +253,7 @@ class SubscriptionManager {
         objectId: connection.identity.sub,
       },
     });
-    
+
     if (!authorized) {
       this.auditLog.logDenied({
         subject: connection.identity.sub,
@@ -263,13 +263,13 @@ class SubscriptionManager {
       });
       return false;
     }
-    
+
     this.auditLog.logAuthorized({
       subject: connection.identity.sub,
       resource: channel,
       action: 'subscribe',
     });
-    
+
     return true;
   }
 }
@@ -326,7 +326,7 @@ interface Event {
   type: string;
   timestamp: string;
   source: string;
-  
+
   // Authorization metadata
   authorization: {
     visibility: 'public' | 'member_only' | 'care_team' | 'internal';
@@ -335,7 +335,7 @@ interface Event {
     requires_consent?: boolean;
     redact_fields?: string[];  // Fields to redact for certain audiences
   };
-  
+
   // Event payload
   data: {
     // ... event-specific data
@@ -370,24 +370,24 @@ class EventFilter {
     connection: Connection,
   ): Promise<Event | null> {
     const { authorization } = event;
-    
+
     // 1. Check visibility level
     const canView = await this.checkVisibility(
       authorization.visibility,
       connection.identity,
       event.authorization.member_id,
     );
-    
+
     if (!canView) {
       return null;  // Don't deliver event
     }
-    
+
     // 2. Check sensitivity and redact if needed
     const filteredEvent = await this.applySensitivityFilter(
       event,
       connection.identity,
     );
-    
+
     // 3. Log access for HIPAA audit
     if (authorization.sensitivity === 'phi') {
       await this.auditLog.logPHIAccess({
@@ -398,10 +398,10 @@ class EventFilter {
         accessedAt: Date.now(),
       });
     }
-    
+
     return filteredEvent;
   }
-  
+
   private async checkVisibility(
     visibility: string,
     identity: Identity,
@@ -410,11 +410,11 @@ class EventFilter {
     switch (visibility) {
       case 'public':
         return true;  // Anyone authenticated can see
-      
+
       case 'member_only':
         // Only the member themselves
         return identity.type === 'member' && identity.memberId === memberId;
-      
+
       case 'care_team':
         // Member or their care team
         if (identity.type === 'member' && identity.memberId === memberId) {
@@ -429,26 +429,26 @@ class EventFilter {
           });
         }
         return false;
-      
+
       case 'internal':
         // Backend services only
         return identity.type === 'service';
-      
+
       default:
         return false;
     }
   }
-  
+
   private applySensitivityFilter(
     event: Event,
     identity: Identity,
   ): Event {
     const { sensitivity, redact_fields } = event.authorization;
-    
+
     // High sensitivity - redact fields for non-care-team
     if (sensitivity === 'high' || sensitivity === 'phi') {
       const isCareTeam = identity.type === 'care_coordinator' || identity.type === 'service';
-      
+
       if (!isCareTeam && redact_fields) {
         const redactedEvent = { ...event };
         for (const field of redact_fields) {
@@ -457,7 +457,7 @@ class EventFilter {
         return redactedEvent;
       }
     }
-    
+
     return event;
   }
 }
@@ -472,14 +472,14 @@ class EventFilter {
   "type": "rte.completed",
   "timestamp": "2025-11-13T12:00:00Z",
   "source": "realtime-eligibility",
-  
+
   "authorization": {
     "visibility": "member_only",
     "sensitivity": "phi",
     "member_id": "A123456",
     "redact_fields": ["data.coverage.diagnosis_codes", "data.coverage.medications"]
   },
-  
+
   "data": {
     "workflow_id": "wf_789",
     "account_id": "A123456",
@@ -537,7 +537,7 @@ interface AuditLog {
     ip_address: string;
     user_agent: string;
   };
-  
+
   // What
   action: 'subscribe' | 'unsubscribe' | 'event_delivered' | 'access_denied';
   resource: {
@@ -545,17 +545,17 @@ interface AuditLog {
     id: string;
     member_id?: string;
   };
-  
+
   // When
   timestamp: string;
-  
+
   // Why (if denied)
   reason?: string;       // "No relationship" | "Token expired" | "Insufficient permissions"
-  
+
   // PHI Access Tracking
   phi_accessed?: boolean;
   phi_type?: 'diagnosis' | 'medication' | 'treatment' | 'full_record';
-  
+
   // Result
   result: 'allowed' | 'denied';
 }
@@ -636,12 +636,12 @@ class AuditLogger {
       index: 'audit-logs',
       document: log,
     });
-    
+
     // 2. If PHI access, send to compliance system
     if (log.phi_accessed) {
       await this.complianceSystem.recordPHIAccess(log);
     }
-    
+
     // 3. If access denied, alert security team (if anomalous)
     if (log.result === 'denied' && this.isAnomalous(log)) {
       await this.securityAlerts.notify({
@@ -651,7 +651,7 @@ class AuditLogger {
       });
     }
   }
-  
+
   private isAnomalous(log: AuditLog): boolean {
     // Detect suspicious patterns:
     // - Multiple denied attempts in short time
@@ -688,14 +688,14 @@ class SubscriptionManager {
   ): Promise<boolean> {
     // Parse wildcard: /member/:memberId/rte/*
     const { memberId, category } = parseWildcardPattern(pattern);
-    
+
     // Wildcard subscriptions require broader authorization
     if (pattern.includes('*')) {
       // Members can only wildcard their own channels
       if (connection.identity.type === 'member') {
         return connection.identity.memberId === memberId;
       }
-      
+
       // Care coordinators can wildcard if they manage the member
       if (connection.identity.type === 'care_coordinator') {
         return await this.authzed.check({
@@ -704,15 +704,15 @@ class SubscriptionManager {
           subject: { objectType: 'care_coordinator', objectId: connection.identity.sub },
         });
       }
-      
+
       // Backend services can wildcard anything
       if (connection.identity.type === 'service') {
         return connection.identity.roles.includes('backend_service');
       }
-      
+
       return false;
     }
-    
+
     // Non-wildcard subscriptions checked per-channel
     return this.authorizeSubscription(connection, pattern);
   }
@@ -806,7 +806,7 @@ class WebSocketGateway {
     // Check token expiration every minute
     setInterval(async () => {
       const expiresIn = connection.identity.exp - Math.floor(Date.now() / 1000);
-      
+
       // Warn client 5 minutes before expiration
       if (expiresIn < 300 && !connection.expirationWarned) {
         connection.send({
@@ -815,7 +815,7 @@ class WebSocketGateway {
         });
         connection.expirationWarned = true;
       }
-      
+
       // Close connection when token expires
       if (expiresIn <= 0) {
         connection.send({
@@ -850,13 +850,13 @@ ws.on('message', (message) => {
 class RateLimiter {
   async checkLimit(connection: Connection, channel: string): Promise<boolean> {
     const key = `ratelimit:${connection.identity.sub}:${channel}`;
-    
+
     // Allow 100 subscriptions per minute per user
     const count = await this.redis.incr(key);
     if (count === 1) {
       await this.redis.expire(key, 60);
     }
-    
+
     if (count > 100) {
       this.auditLog.logDenied({
         subject: connection.identity.sub,
@@ -866,7 +866,7 @@ class RateLimiter {
       });
       return false;
     }
-    
+
     return true;
   }
 }
@@ -881,10 +881,10 @@ class RateLimiter {
 ```typescript
 class ConnectionManager {
   private readonly MAX_CONNECTIONS_PER_USER = 5;
-  
+
   async addConnection(connection: Connection): Promise<boolean> {
     const existingConns = this.getConnectionsByUser(connection.identity.sub);
-    
+
     if (existingConns.length >= this.MAX_CONNECTIONS_PER_USER) {
       this.auditLog.logDenied({
         subject: connection.identity.sub,
@@ -893,7 +893,7 @@ class ConnectionManager {
       });
       return false;
     }
-    
+
     this.connections.set(connection.id, connection);
     return true;
   }
@@ -909,7 +909,7 @@ class ConnectionManager {
 ```typescript
 class SubscriptionManager {
   private readonly MAX_SUBSCRIPTIONS_PER_CONNECTION = 50;
-  
+
   async subscribe(connection: Connection, channel: string): Promise<boolean> {
     if (connection.subscriptions.size >= this.MAX_SUBSCRIPTIONS_PER_CONNECTION) {
       connection.send({
@@ -918,9 +918,9 @@ class SubscriptionManager {
       });
       return false;
     }
-    
+
     // ... authorization checks ...
-    
+
     connection.subscriptions.add(channel);
     return true;
   }
@@ -938,7 +938,7 @@ type Subscription {
   # Members subscribe to own events only
   memberEvents(accountId: ID!): MemberEvent!
     @authorize(requires: MEMBER_SELF)
-  
+
   # Care coordinators subscribe to managed members
   careTeamEvents(memberId: ID!): CareTeamEvent!
     @authorize(requires: CARE_COORDINATOR)
@@ -961,7 +961,7 @@ enum Role {
 # apollo-router.yaml
 authorization:
   require_authentication: true
-  
+
 coprocessor:
   url: http://authzed:50051
   router:
@@ -978,18 +978,18 @@ const resolvers = {
       subscribe: async (_, { accountId }, context) => {
         // 1. Extract identity from JWT
         const identity = context.user;
-        
+
         // 2. Check authorization with Authzed
         const authorized = await authzed.check({
           resource: { objectType: 'member', objectId: accountId },
           permission: 'view_events',
           subject: { objectType: identity.type, objectId: identity.sub },
         });
-        
+
         if (!authorized) {
           throw new ForbiddenError('Not authorized to subscribe to this member\'s events');
         }
-        
+
         // 3. Subscribe to WebSocket Gateway channel
         return pubsub.asyncIterator(`member:${accountId}:events`);
       },
@@ -1025,7 +1025,7 @@ message Event {
   string type = 2;
   google.protobuf.Timestamp timestamp = 3;
   google.protobuf.Struct data = 4;
-  
+
   // Authorization metadata
   EventAuthorization authorization = 5;
 }
@@ -1047,7 +1047,7 @@ func (s *EventStreamService) StreamMemberEvents(
 ) error {
     // 1. Extract identity from JWT (Istio injects claims into headers)
     claims := extractJWTClaims(stream.Context())
-    
+
     // 2. Authorize access to member events
     authorized, err := s.authzed.Check(stream.Context(), &authzedpb.CheckPermissionRequest{
         Resource: &authzedpb.ObjectReference{
@@ -1062,14 +1062,14 @@ func (s *EventStreamService) StreamMemberEvents(
             },
         },
     })
-    
+
     if err != nil || !authorized {
         return status.Error(codes.PermissionDenied, "Not authorized")
     }
-    
+
     // 3. Subscribe to Kafka and stream events
     consumer := s.kafka.Subscribe(fmt.Sprintf("member.%s.events", req.MemberId))
-    
+
     for event := range consumer.Events() {
         // Filter event based on authorization
         filteredEvent := s.filterEvent(event, claims)
@@ -1077,7 +1077,7 @@ func (s *EventStreamService) StreamMemberEvents(
             stream.Send(filteredEvent)
         }
     }
-    
+
     return nil
 }
 ```
@@ -1093,11 +1093,11 @@ func (s *EventStreamService) StreamMemberEvents(
 export class EventClient {
   private ws: WebSocket;
   private token: string;
-  
+
   constructor(config: EventClientConfig) {
     this.token = config.token;  // JWT from auth provider
   }
-  
+
   async connect(): Promise<void> {
     // Connect with JWT in Authorization header
     this.ws = new WebSocket(this.config.url, {
@@ -1105,10 +1105,10 @@ export class EventClient {
         'Authorization': `Bearer ${this.token}`,
       },
     });
-    
+
     this.ws.on('message', (message) => {
       const event = JSON.parse(message);
-      
+
       // Handle auth events
       if (event.type === 'auth.expiring') {
         this.handleTokenExpiring(event.expiresIn);
@@ -1117,43 +1117,43 @@ export class EventClient {
       }
     });
   }
-  
+
   async subscribe(channel: string, handler: EventHandler): Promise<void> {
     // Client-side validation (server also validates)
     if (!this.canSubscribe(channel)) {
       throw new Error('Not authorized to subscribe to this channel');
     }
-    
+
     // Send subscription request
     this.ws.send(JSON.stringify({
       type: 'subscribe',
       channel: channel,
     }));
-    
+
     this.subscriptions.set(channel, handler);
   }
-  
+
   private canSubscribe(channel: string): boolean {
     // Parse JWT claims (client-side hint only, server enforces)
     const claims = this.parseJWT(this.token);
-    
+
     // Member can only subscribe to own channels
     if (claims.type === 'member') {
       const memberId = claims['https://includedhealth.com/member_id'];
       return channel.startsWith(`/member/${memberId}/`);
     }
-    
+
     // Care coordinators checked server-side
     return true;
   }
-  
+
   private async handleTokenExpiring(expiresIn: number): Promise<void> {
     console.warn(`Token expiring in ${expiresIn} seconds, refreshing...`);
-    
+
     // Refresh token via auth provider
     const newToken = await this.authProvider.refresh();
     this.token = newToken;
-    
+
     // Reconnect with new token
     await this.reconnectWithNewToken();
   }

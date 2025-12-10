@@ -34,4 +34,3 @@ See [CLAUDE.md](CLAUDE.md) for detailed project information and usage instructio
 ## Related Repositories
 
 This repository is part of a multi-repository workspace managed through `project.yaml`. See [AGENTS.md](AGENTS.md) for workspace management details.
-
